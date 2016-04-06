@@ -8,7 +8,7 @@ codecs.register(lambda name: codecs.lookup('utf8') if name == 'utf8mb4' else Non
 
 class Database:
 	""" Database class object """
-	def __init__(self, host='localhost', user='root', password='random16', db='vine'):
+	def __init__(self, host='localhost', user='root', password='zeus1997', db='vine'):
 		self.host = host
 		self.user = user
 		self.password = password
