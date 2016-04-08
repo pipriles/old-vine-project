@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 
 import vine
-from multiprocessing import Process
 from time import sleep, time
+from multiprocessing import Process, Value
+import socket
+import os
+
+socket_path = '/tmp/SCRAPE_SOCKET'
 
 class Vine_Bot:
 	cp = []			# List of processes
@@ -10,8 +14,16 @@ class Vine_Bot:
 	wait_q = {}		# Wait queue
 	
 	def __init__(self):
+		
+		# Connect to database
 		self.db = vine.Database().connect_db()
 		self.dbc = self.db.cursor()
+		print 'Connected to database: vine'
+
+		# Listen to socket
+		self.sp = Socket_Process()
+		self.sp.start()
+		print 'Connected to database: vine'
 
 	def get_jobs(self):
 		self.dbc.execute('SELECT * FROM job')
@@ -117,23 +129,67 @@ class Vine_Bot:
 				self.cp.append(temp)
 
 	def start(self):
-		while True: 
+		while True:
 			now = time()
-			bot.process_jobs()
+			if self.sp.status.value: 
+				bot.process_jobs()
+
 			bot.clean_zombies()	# Check for alive zombies :)
 
-			# Wait some time	
-			print "\n Wait moment \n", self.cp, "\n"
-			sleep(5 - int(time() - now))
+			print "\n Status:", self.sp.status.value
+			print " Wait moment \n ", self.cp, "\n"	# Just debug things
+			sleep(5 - int(time() - now))			# Wait some time
 
 	def close(self):
+		self.sp.close()
 		for p in self.cp: p.join()
 		self.db.commit()
 		self.db.close()
+
+class Socket_Process:
+	s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+	status = Value('i', 1)
+
+	def __init__(self):
+		# Listen to socket
+		self.s.bind(socket_path)
+		self.s.listen(1)
+
+	def start(self):
+		self.lp = Process(name="listen_process", target=self.listen)
+		self.lp.start()
+
+	def close(self):
+		self.lp.terminate()
+		self.lp.join()
+		self.s.close()
+
+	def listen(self):
+		while True:
+			print '\n Waiting for a connection \n'
+			c, addr = self.s.accept()
+			try:
+				print '\n Connection from', addr, '\n'
+				while True:
+					msg = c.recv(1024)
+					if not msg: break
+					if msg.lower() == 'change status':
+						self.status.value = not self.status.value
+					
+					print '\n Message:', msg, '\n'
+					c.sendall(msg)
+			finally:
+				c.close()
+
+try:
+    os.unlink(socket_path)
+except OSError:
+    if os.path.exists(socket_path):
+        raise
 
 if __name__ == '__main__':
 	bot = Vine_Bot()
 	try: bot.start()
 	except KeyboardInterrupt: 
-		print "\nThere was a mistake :("
+		print "\nWhy? :("
 	bot.close()
