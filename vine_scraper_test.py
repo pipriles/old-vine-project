@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import vine
-from multiprocessing import Process, Pool
+from multiprocessing import Process
 from time import sleep, time
 
 class Vine_Bot:
@@ -58,20 +58,18 @@ class Vine_Bot:
 			p.start()	# Parallel scrape (No duplicate in same job)
 
 	def run_convert(self, job):
+		if job[8] - 1 <= 0 or self.wait_q.get(job[0]) != None:
 
-		if job[8] - 1 <= 0 or self.wait_p.get(job[0]) != None:
-			
 			# If there is scrapes running for the same job
 			# or there is compilations proccessing
-			if self.cs.get(job[0]) or len(self.wait_p) > 1:
+			if self.cs.get(job[0]) or len(self.wait_q) > 1:
 
 				# Add one to the pend process
 				if job[8] - 1 <= 0: 
-					self.wait_p[job[0]] = (self.wait_p[job[0]] + 1) if self.wait_p.get(job[0]) else 1
-
+					self.wait_q[job[0]] = (self.wait_q[job[0]] + 1) if self.wait_q.get(job[0]) else 1
 			else:
 				# Combine top n videos
-				print "\n Compilation started\n"
+				print "\n Compilation started\n"	# Just debug things
 
 				sql = "UPDATE job SET job.status = CASE WHEN job.status = 0 THEN 2 ELSE 3 END WHERE job.id = %s"
 				self.dbc.execute(sql % job[0])
@@ -81,15 +79,14 @@ class Vine_Bot:
 				self.cp.append(p)
 
 				# Horrible conditional block
-				if self.wait_p.get(job[0]):
-					self.wait_p[job[0]] = self.wait_p[job[0]] - 1
-					if self.wait_p[job[0]] < 1:
-						del self.wait_p[job[0]]
+				if self.wait_q.get(job[0]):
+					self.wait_q[job[0]] = self.wait_q[job[0]] - 1
+					if self.wait_q[job[0]] < 1:
+						del self.wait_q[job[0]]
 
 				p.start() # Start compilation process
 
 	def clean_zombies(self):
-
 		for x in xrange(len(self.cp)):
 
 			temp = self.cp.pop(0)
@@ -121,7 +118,6 @@ class Vine_Bot:
 
 	def start(self):
 		while True: 
-
 			now = time()
 			bot.process_jobs()
 			bot.clean_zombies()	# Check for alive zombies :)
@@ -138,6 +134,6 @@ class Vine_Bot:
 if __name__ == '__main__':
 	bot = Vine_Bot()
 	try: bot.start()
-	except: 
+	except KeyboardInterrupt: 
 		print "\nThere was a mistake :("
 	bot.close()

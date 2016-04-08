@@ -17,7 +17,7 @@ def download_top_videos(job):
 
 	# Look for videos not combined
 	sql = """
-		SELECT vine.url, vine.vineID, vine.title,         
+		SELECT vine.url, vine.id, vine.title,         
         	(vine.likes + vine.views + vine.reposts) /
         	CASE 
             		WHEN dif > 0.5 THEN 0.42 + dif * 0.01 ELSE dif 
@@ -29,18 +29,19 @@ def download_top_videos(job):
             		from vine
         	) as vine
         
-        	INNER JOIN video_job
-        	ON video_job.videoID=vine.vineID
+        	INNER JOIN vine_job
+        	ON vine_job.vineID=vine.id
        		INNER JOIN job
-        	ON job.id = video_job.jobID
-        	WHERE video_job.jobID=%s AND video_job.used=0 
+        	ON job.id = vine_job.jobID
+        	WHERE vine_job.jobID=%s AND vine_job.used=0 
        		AND (job.date_limit = 0 OR DATE(vine.date) > (NOW() - INTERVAL job.date_limit DAY))
         	ORDER BY formula DESC
         	LIMIT %s
 	"""
 
-	dbc.execute(sql % (job[0], job[5]))
+	dbc.execute(sql % (job[0], job[6]))
 	results = dbc.fetchall()
+	db.commit()
 
 	if not os.path.exists(video_path):
 		os.makedirs(video_path)

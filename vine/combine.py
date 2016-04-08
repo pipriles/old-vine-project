@@ -18,15 +18,16 @@ def convert_video(job_id, vid):
 	db = Database().connect_db()
 	dbc = db.cursor()
 
-	dbc.execute("SELECT * FROM settings;")
+	dbc.execute("SELECT * FROM settings WHERE jobID = %s;" % job_id)
 	conf = dbc.fetchone()
+	db.commit()
 
 	# Horrible magic ffmpeg command
 	command = \
 		[
-			ffmpeg_bin, '-loop', '1', '-i', image_path + '%s' % conf[10], '-i', video_path + "%s_%s.mp4" % (vid[0], job_id), 
+			ffmpeg_bin, '-loop', '1', '-i', image_path + '%s' % conf[11], '-i', video_path + "%s_%s.mp4" % (vid[0], job_id), 
 			'-filter_complex', "[0:v]scale=%s[scaled];[1:v]scale=%s[scaled2]; [scaled][scaled2]overlay=(main_w-overlay_w)/2:0:shortest=1[res]; [res]drawtext=fontfile=%s:text='%s':x=%s: y=%s: fontsize=%s:fontcolor=%s:box=1:boxcolor=%s[out]" % 
-			(conf[1], conf[2], font_path + conf[9], vid[1], conf[3], conf[4], conf[6], conf[7], conf[8]),
+			(conf[2], conf[3], font_path + conf[10], vid[1], conf[4], conf[5], conf[7], conf[8], conf[9]),
 			'-map', '[out]', 
 			'-map', '1:a',
 			'-y', '-qscale:v', '1',
@@ -35,7 +36,7 @@ def convert_video(job_id, vid):
 
 	if call(command) == 0:
 		# Check video as used
-		sql = "UPDATE video_job SET used = 1 WHERE video_job.jobID = '%s' AND video_job.videoID = '%s'"
+		sql = "UPDATE vine_job SET used = 1 WHERE vine_job.jobID = '%s' AND vine_job.vineID = '%s'"
 		dbc.execute(sql % (job_id, vid[0]))
 		result = video_path + "%s_%s.mpg" % (vid[0], job_id)
 		db.commit()
@@ -80,8 +81,16 @@ def combine_top_videos(job):
 			command = ['chgrp', 'www-data', video_path + '%s.mp4' % result_name]
 			call(command)
 			
-			sql = "INSERT INTO video (name, job) VALUES ('%s', '%s')"
-			dbc.execute(sql % (result_name, job[1]))
+			dbc.execute("SELECT id FROM settings WHERE jobID = %s" % job[0])
+			conf_id = dbc.fetchone()
+			db.commit()
+
+			sql = """
+				INSERT INTO video (settingsID, jobID, source, name) 
+				VALUES ('%s', '%s', '%s', '%s')
+			"""
+			dbc.execute(sql % (conf_id, job[0], job[2], result_name))
+			db.commit()
 
 	else:
 		print "No hay videos que combinar"

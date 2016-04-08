@@ -98,6 +98,7 @@ class VineData:
 					'videoUrl': value["headerPost"]["videoUrl"],
 					'description': value["headerPost"]["description"],
 					'permalinkUrl': value["headerPost"]["permalinkUrl"][18:],
+					'userId': value["headerPost"]["userId"],
 					'username': value["headerPost"]["username"],
 					'created': value["headerPost"]["created"]
 				})
@@ -134,6 +135,7 @@ class VineData:
 				'videoUrl': value["videoUrl"],
 				'description': value["description"],
 				'permalinkUrl': value["permalinkUrl"][18:],
+				'userId': value["userId"],
 				'username': value["username"],
 				'loops': value["loops"]["count"],
 				'likes': value["likes"]["count"],
@@ -154,14 +156,20 @@ def vineData_SQL(job, size=20):
 	dbc.execute('SET NAMES utf8mb4;')
 	dbc.execute('SET CHARACTER SET utf8mb4;')
 	dbc.execute('SET character_set_connection=utf8mb4;')
+	db.commit()
 
-	vine = VineData(job[1], job[2])
+	vine = VineData(job[2], job[3])
 	_url = vine.get_VineData(size)
 	# precious data
 
 	for video in vine.vinedata:
+
+		sql = 'INSERT IGNORE INTO user (id, name, banned) VALUES ("%s", "%s", 0)'
+		dbc.execute(sql % (video['userId'], video['username'].replace("\"", "\'")))
+		db.commit()
+
 		sql = """
-			INSERT INTO vine (vineID, url, title, user, views, likes, comments, reposts, date) 
+			INSERT INTO vine (id, url, title, userID, views, likes, comments, reposts, date) 
 			VALUES ("%s", "%s", "%s", "%s", %s, %s, %s, %s, "%s") 
 			ON DUPLICATE KEY UPDATE
 			views = %s, likes = %s, comments = %s, reposts = %s, dbdate = NOW()
@@ -177,7 +185,7 @@ def vineData_SQL(job, size=20):
 			video['permalinkUrl'], \
 			video['videoUrl'], \
 			title, \
-			video['username'].replace("\"", "\'"), \
+			video['userId'], \
 			video['loops'], \
 			video['likes'], \
 			video['comments'], \
@@ -188,11 +196,12 @@ def vineData_SQL(job, size=20):
 			video['comments'], \
 			video['reposts'])
 		)
+		db.commit()
 
 		# Insert video relation with job
-		dbc.executemany("INSERT IGNORE INTO video_job (jobID, videoID, used) VALUES (%s, %s, 0)", [(job[0], video['permalinkUrl'])])
+		dbc.executemany("INSERT IGNORE INTO vine_job (jobID, vineID, used) VALUES (%s, %s, 0)", [(job[0], video['permalinkUrl'])])
+		db.commit()
 
-	db.commit()
 	db.close()
 
 def fix(title):
