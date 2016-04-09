@@ -6,7 +6,8 @@ from multiprocessing import Process, Value
 import socket
 import os
 
-socket_path = '/tmp/SCRAPE_SOCKET'
+socket_folder = '/tmp/SCRAPE_SOCKET'
+socket_path = socket_folder + '/SCRAPE_SOCKET'
 
 class Vine_Bot:
 	cp = []			# List of processes
@@ -157,6 +158,7 @@ class Socket_Process:
 
 	def __init__(self):
 		# Listen to socket
+		self.check_socket()
 		self.s.bind(socket_path)
 		self.s.listen(1)
 
@@ -177,6 +179,7 @@ class Socket_Process:
 	def close(self):
 		self.stop()
 		self.s.close()
+		self.check_socket()
 
 	def listen(self):
 		try:
@@ -188,21 +191,26 @@ class Socket_Process:
 					while True:
 						msg = c.recv(1024)
 						if not msg: break
-						if msg.lower() == 'change status':
-							self.status.value = not self.status.value
-						
 						print '\n Message:', msg, '\n'
-						c.sendall(msg)
+						msg = msg.lower()
+						if msg == 'change status':
+							self.status.value = not self.status.value
+						elif msg == 'get status':
+							c.sendall(str(self.status.value))
+				except:
+					pass
 				finally:
 					c.close()
 		except KeyboardInterrupt:
 			pass
 
-try:
-    os.unlink(socket_path)
-except OSError:
-    if os.path.exists(socket_path):
-        raise
+	def check_socket(self):
+		if os.path.exists(socket_folder):
+			try:
+			    os.unlink(socket_path)
+			except OSError:
+			    if os.path.exists(socket_path):
+			        raise
 
 if __name__ == '__main__':
 	bot = Vine_Bot()
