@@ -179,7 +179,6 @@ class Socket_Process:
 	def close(self):
 		self.stop()
 		self.s.close()
-		self.check_socket()
 
 	def listen(self):
 		try:
