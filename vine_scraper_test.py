@@ -23,7 +23,10 @@ class Vine_Bot:
 		# Listen to socket
 		self.sp = Socket_Process()
 		self.sp.start()
-		print 'Connected to database: vine'
+		print 'Listening to socket:', socket_path
+
+	def __del__(self):
+		self.close()
 
 	def get_jobs(self):
 		self.dbc.execute('SELECT * FROM job')
@@ -143,43 +146,57 @@ class Vine_Bot:
 	def close(self):
 		self.sp.close()
 		for p in self.cp: p.join()
-		self.db.commit()
-		self.db.close()
+		if self.db.open:
+			self.db.commit()
+			self.db.close()
 
 class Socket_Process:
 	s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 	status = Value('i', 1)
+	lp = None
 
 	def __init__(self):
 		# Listen to socket
 		self.s.bind(socket_path)
 		self.s.listen(1)
 
+	def __del__(self):
+		self.close()
+
 	def start(self):
+		if self.lp != None: self.close()
 		self.lp = Process(name="listen_process", target=self.listen)
 		self.lp.start()
 
+	def stop(self):
+		if self.lp != None:
+			self.lp.terminate()
+			self.lp.join()
+		self.lp = None
+
 	def close(self):
-		self.lp.terminate()
-		self.lp.join()
+		self.stop()
 		self.s.close()
 
 	def listen(self):
-		while True:
-			print '\n Waiting for a connection \n'
-			c, addr = self.s.accept()
-			try:
-				print '\n Connection from', addr, '\n'
-				while True:
-					msg = c.recv(1024)
-					if not msg: break
-					if msg.lower() == 'change status':
-						self.status.value = not self.status.value
-					
-					print '\n Message:', msg, '\n'
-					c.sendall(msg)
-			finally:
-				c.close()
+		try:
+			while True:
+				print '\n Waiting for a connection \n'
+				c, addr = self.s.accept()
+				try:
+					print '\n Connection from', addr, '\n'
+					while True:
+						msg = c.recv(1024)
+						if not msg: break
+						if msg.lower() == 'change status':
+							self.status.value = not self.status.value
+						
+						print '\n Message:', msg, '\n'
+						c.sendall(msg)
+				finally:
+					c.close()
+		except KeyboardInterrupt:
+			pass
 
 try:
     os.unlink(socket_path)
@@ -192,4 +209,3 @@ if __name__ == '__main__':
 	try: bot.start()
 	except KeyboardInterrupt: 
 		print "\nWhy? :("
-	bot.close()
