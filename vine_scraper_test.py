@@ -6,7 +6,9 @@ from multiprocessing import Process, Value
 import socket
 import os
 
-socket_folder = '/tmp/SCRAPE_SOCKET'
+# Don't forget to create the SCRAPE Folder
+# with chgrp www-data and chmod g+s
+socket_folder = '/tmp/SCRAPE'
 socket_path = socket_folder + '/SCRAPE_SOCKET'
 
 class Vine_Bot:
