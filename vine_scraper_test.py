@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin python2
 
 import vine
 from time import sleep, time
@@ -19,8 +19,10 @@ class Vine_Bot:
 	def __init__(self):
 		
 		# Connect to database
+		
 		self.db = vine.Database().connect_db()
 		self.dbc = self.db.cursor()
+		
 		print 'Connected to database: vine'
 
 		# Listen to socket
