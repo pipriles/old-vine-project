@@ -3,13 +3,13 @@
 import vine
 from time import sleep, time
 from multiprocessing import Process, Value
+from subprocess import call
 import socket
 import os
 
-# Don't forget to create the SCRAPE Folder
-# with chgrp www-data and chmod g+s
-socket_folder = '/tmp/SCRAPE'
-socket_path = socket_folder + '/SCRAPE_SOCKET'
+SOCKET_FOLDER = '/tmp/SCRAPE'
+SOCKET_PATH = SOCKET_FOLDER + '/SCRAPE_SOCKET'
+CONFIGURE_SCRIPT = './configure.sh'
 
 class Vine_Bot:
 	cp = []			# List of processes
@@ -28,7 +28,7 @@ class Vine_Bot:
 		# Listen to socket
 		self.sp = Socket_Process()
 		self.sp.start()
-		print 'Listening to socket:', socket_path
+		print 'Listening to socket:', SOCKET_PATH
 
 	def __del__(self):
 		self.close()
@@ -162,9 +162,11 @@ class Socket_Process:
 
 	def __init__(self):
 		# Listen to socket
+		call(['mkdir', '-p', SOCKET_FOLDER])
 		self.check_socket()
-		self.s.bind(socket_path)
+		self.s.bind(SOCKET_PATH)
 		self.s.listen(1)
+		call(['./configure.sh'])
 
 	def __del__(self):
 		self.close()
@@ -208,11 +210,11 @@ class Socket_Process:
 			pass
 
 	def check_socket(self):
-		if os.path.exists(socket_folder):
+		if os.path.exists(SOCKET_FOLDER):
 			try:
-			    os.unlink(socket_path)
+			    os.unlink(SOCKET_PATH)
 			except OSError:
-			    if os.path.exists(socket_path):
+			    if os.path.exists(SOCKET_PATH):
 			        raise
 
 if __name__ == '__main__':
