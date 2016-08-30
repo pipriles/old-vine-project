@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 4.4.13.1deb1
--- http://www.phpmyadmin.net
+-- version 4.6.4
+-- https://www.phpmyadmin.net/
 --
 -- Servidor: localhost
--- Tiempo de generación: 22-03-2016 a las 18:55:27
--- Versión del servidor: 5.6.28-0ubuntu0.15.10.1
--- Versión de PHP: 5.6.11-1ubuntu3.1
+-- Tiempo de generación: 29-08-2016 a las 23:25:50
+-- Versión del servidor: 10.1.16-MariaDB
+-- Versión de PHP: 7.0.10
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
@@ -17,8 +17,20 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Base de datos: `vine_test`
+-- Base de datos: `vine`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `account`
+--
+
+CREATE TABLE `account` (
+  `user` varchar(50) NOT NULL,
+  `pass` varchar(75) NOT NULL,
+  `token` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -26,17 +38,34 @@ SET time_zone = "+00:00";
 -- Estructura de tabla para la tabla `job`
 --
 
-CREATE TABLE IF NOT EXISTS `job` (
-  `id` bigint(20) NOT NULL,
-  `url` varchar(100) DEFAULT NULL,
-  `scrape_limit` int(11) NOT NULL DEFAULT '999',
-  `scrape` int(11) NOT NULL,
-  `next_scrape` int(11) NOT NULL,
-  `combine_limit` int(11) NOT NULL,
-  `combine` int(11) NOT NULL,
-  `next_combine` int(11) NOT NULL,
-  `date_limit` int(20) NOT NULL DEFAULT '0',
-  `status` int(11) NOT NULL DEFAULT '0'
+CREATE TABLE `job` (
+  `id` int(20) UNSIGNED NOT NULL,
+  `settingsID` int(20) UNSIGNED DEFAULT NULL,
+  `name` varchar(100) NOT NULL,
+  `url` varchar(100) NOT NULL,
+  `scrape_limit` int(11) UNSIGNED NOT NULL,
+  `scrape` int(11) UNSIGNED NOT NULL,
+  `next_scrape` int(11) UNSIGNED NOT NULL,
+  `combine_limit` int(11) UNSIGNED NOT NULL,
+  `combine` int(11) UNSIGNED NOT NULL,
+  `next_combine` int(11) UNSIGNED NOT NULL,
+  `date_limit` int(11) UNSIGNED NOT NULL,
+  `status` tinyint(4) NOT NULL,
+  `autoupload` tinyint(1) NOT NULL,
+  `formula` text NOT NULL COMMENT 'This should not be used'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Scrape Jobs';
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `job_account`
+--
+
+CREATE TABLE `job_account` (
+  `jobID` int(20) UNSIGNED NOT NULL,
+  `accountID` varchar(50) NOT NULL,
+  `title` varchar(100) NOT NULL,
+  `language` varchar(50) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -45,16 +74,16 @@ CREATE TABLE IF NOT EXISTS `job` (
 -- Estructura de tabla para la tabla `password`
 --
 
-CREATE TABLE IF NOT EXISTS `password` (
-  `idpassword` int(11) NOT NULL,
+CREATE TABLE `password` (
+  `id` int(11) UNSIGNED NOT NULL,
   `pass` varchar(50) NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Volcado de datos para la tabla `password`
 --
 
-INSERT INTO `password` (`idpassword`, `pass`) VALUES
+INSERT INTO `password` (`id`, `pass`) VALUES
 (1, '9f05aa4202e4ce8d6a72511dc735cce9');
 
 -- --------------------------------------------------------
@@ -63,27 +92,31 @@ INSERT INTO `password` (`idpassword`, `pass`) VALUES
 -- Estructura de tabla para la tabla `settings`
 --
 
-CREATE TABLE IF NOT EXISTS `settings` (
-  `id` int(10) NOT NULL,
-  `scale_1` varchar(255) DEFAULT NULL,
-  `scale_2` varchar(255) DEFAULT NULL,
-  `text_x` varchar(255) DEFAULT NULL,
-  `text_y` varchar(255) DEFAULT NULL,
-  `text` varchar(255) DEFAULT NULL,
-  `font_size` varchar(255) DEFAULT NULL,
-  `font_color` varchar(255) DEFAULT NULL,
-  `font_background_color` varchar(255) DEFAULT NULL,
-  `font` varchar(255) DEFAULT NULL,
-  `image` varchar(255) DEFAULT NULL,
-  `script_status` tinyint(1) DEFAULT '0'
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+CREATE TABLE `settings` (
+  `id` int(20) UNSIGNED NOT NULL,
+  `scale_1` varchar(255) NOT NULL,
+  `scale_2` varchar(255) NOT NULL,
+  `text_x` varchar(255) NOT NULL,
+  `text_y` varchar(255) NOT NULL,
+  `text_size` int(11) UNSIGNED NOT NULL,
+  `font_size` varchar(255) NOT NULL,
+  `font_color` varchar(255) NOT NULL,
+  `font_background_color` varchar(255) NOT NULL,
+  `font` varchar(255) NOT NULL,
+  `image` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
 
 --
--- Volcado de datos para la tabla `settings`
+-- Estructura de tabla para la tabla `user`
 --
 
-INSERT INTO `settings` (`id`, `scale_1`, `scale_2`, `text_x`, `text_y`, `text`, `font_size`, `font_color`, `font_background_color`, `font`, `image`, `script_status`) VALUES
-(1, '720+200:720', '720:720', '(main_w/2-text_w/2)', '(main_h)-50', 'Text here please', '32', 'black@1', 'white@1', 'FreeSerif.ttf', 'deadpool_by_chasejc-d4d3aoz.png', 1);
+CREATE TABLE `user` (
+  `id` varchar(50) NOT NULL,
+  `name` varchar(30) NOT NULL,
+  `banned` tinyint(1) NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -91,23 +124,27 @@ INSERT INTO `settings` (`id`, `scale_1`, `scale_2`, `text_x`, `text_y`, `text`, 
 -- Estructura de tabla para la tabla `video`
 --
 
-CREATE TABLE IF NOT EXISTS `video` (
-  `id` int(11) NOT NULL,
+CREATE TABLE `video` (
+  `id` int(20) UNSIGNED NOT NULL,
+  `settingsID` int(20) UNSIGNED DEFAULT NULL,
+  `source` varchar(100) NOT NULL,
   `name` varchar(50) NOT NULL,
-  `job` varchar(100) NOT NULL,
-  `date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+  `date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `status` tinyint(4) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `video_job`
+-- Estructura de tabla para la tabla `video_account`
 --
 
-CREATE TABLE IF NOT EXISTS `video_job` (
-  `jobID` bigint(20) NOT NULL,
-  `videoID` varchar(25) NOT NULL,
-  `used` tinyint(1) NOT NULL DEFAULT '0'
+CREATE TABLE `video_account` (
+  `videoID` int(20) UNSIGNED NOT NULL,
+  `accountID` varchar(50) NOT NULL,
+  `title` varchar(100) NOT NULL,
+  `language` varchar(50) NOT NULL,
+  `url` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -116,37 +153,72 @@ CREATE TABLE IF NOT EXISTS `video_job` (
 -- Estructura de tabla para la tabla `vine`
 --
 
-CREATE TABLE IF NOT EXISTS `vine` (
-  `id` bigint(20) NOT NULL,
-  `vineID` varchar(25) CHARACTER SET utf8 NOT NULL,
-  `url` varchar(2083) DEFAULT NULL,
-  `title` text,
-  `user` varchar(30) DEFAULT NULL,
-  `views` bigint(20) NOT NULL DEFAULT '0',
-  `likes` bigint(20) NOT NULL DEFAULT '0',
-  `comments` int(11) NOT NULL DEFAULT '0',
-  `reposts` int(11) NOT NULL DEFAULT '0',
+CREATE TABLE `vine` (
+  `id` varchar(35) NOT NULL,
+  `userID` varchar(50) NOT NULL,
+  `url` varchar(2083) NOT NULL,
+  `title` text CHARACTER SET utf8mb4 NOT NULL,
+  `views` int(20) UNSIGNED NOT NULL,
+  `likes` int(20) UNSIGNED NOT NULL,
+  `comments` int(20) UNSIGNED NOT NULL,
+  `reposts` int(20) UNSIGNED NOT NULL,
   `date` datetime NOT NULL,
   `dbdate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Vines videos stored';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Vine videos';
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `vine_job`
+--
+
+CREATE TABLE `vine_job` (
+  `jobID` int(20) UNSIGNED NOT NULL,
+  `vineID` varchar(35) NOT NULL,
+  `used` tinyint(4) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `vine_video`
+--
+
+CREATE TABLE `vine_video` (
+  `vineID` varchar(35) NOT NULL,
+  `videoID` int(20) UNSIGNED NOT NULL,
+  `position` int(11) UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Índices para tablas volcadas
 --
 
 --
+-- Indices de la tabla `account`
+--
+ALTER TABLE `account`
+  ADD PRIMARY KEY (`user`);
+
+--
 -- Indices de la tabla `job`
 --
 ALTER TABLE `job`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `url` (`url`),
-  ADD UNIQUE KEY `url_2` (`url`);
+  ADD KEY `settingsID` (`settingsID`);
+
+--
+-- Indices de la tabla `job_account`
+--
+ALTER TABLE `job_account`
+  ADD PRIMARY KEY (`jobID`,`accountID`),
+  ADD KEY `fk_ja_account` (`accountID`);
 
 --
 -- Indices de la tabla `password`
 --
 ALTER TABLE `password`
-  ADD PRIMARY KEY (`idpassword`);
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indices de la tabla `settings`
@@ -155,26 +227,45 @@ ALTER TABLE `settings`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indices de la tabla `video`
+-- Indices de la tabla `user`
 --
-ALTER TABLE `video`
+ALTER TABLE `user`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indices de la tabla `video_job`
+-- Indices de la tabla `video`
 --
-ALTER TABLE `video_job`
-  ADD PRIMARY KEY (`jobID`,`videoID`),
-  ADD KEY `jobID` (`jobID`),
-  ADD KEY `videoID` (`videoID`) USING BTREE;
+ALTER TABLE `video`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `settingsID` (`settingsID`) USING BTREE;
+
+--
+-- Indices de la tabla `video_account`
+--
+ALTER TABLE `video_account`
+  ADD PRIMARY KEY (`videoID`,`accountID`),
+  ADD KEY `fk_va_account` (`accountID`);
 
 --
 -- Indices de la tabla `vine`
 --
 ALTER TABLE `vine`
-  ADD PRIMARY KEY (`vineID`),
-  ADD UNIQUE KEY `vineID` (`vineID`),
-  ADD UNIQUE KEY `id` (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `userID` (`userID`);
+
+--
+-- Indices de la tabla `vine_job`
+--
+ALTER TABLE `vine_job`
+  ADD PRIMARY KEY (`jobID`,`vineID`),
+  ADD KEY `fk_vj_vine` (`vineID`);
+
+--
+-- Indices de la tabla `vine_video`
+--
+ALTER TABLE `vine_video`
+  ADD PRIMARY KEY (`vineID`,`videoID`),
+  ADD KEY `fk_vv_video` (`videoID`);
 
 --
 -- AUTO_INCREMENT de las tablas volcadas
@@ -184,37 +275,71 @@ ALTER TABLE `vine`
 -- AUTO_INCREMENT de la tabla `job`
 --
 ALTER TABLE `job`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT de la tabla `password`
 --
 ALTER TABLE `password`
-  MODIFY `idpassword` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=2;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 --
 -- AUTO_INCREMENT de la tabla `settings`
 --
 ALTER TABLE `settings`
-  MODIFY `id` int(10) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=2;
+  MODIFY `id` int(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT de la tabla `video`
 --
 ALTER TABLE `video`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT de la tabla `vine`
---
-ALTER TABLE `vine`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 --
 -- Restricciones para tablas volcadas
 --
 
 --
--- Filtros para la tabla `video_job`
+-- Filtros para la tabla `job`
 --
-ALTER TABLE `video_job`
-  ADD CONSTRAINT `job` FOREIGN KEY (`jobID`) REFERENCES `job` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `video` FOREIGN KEY (`videoID`) REFERENCES `vine` (`vineID`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `job`
+  ADD CONSTRAINT `fk_job_settings` FOREIGN KEY (`settingsID`) REFERENCES `settings` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Filtros para la tabla `job_account`
+--
+ALTER TABLE `job_account`
+  ADD CONSTRAINT `fk_ja_account` FOREIGN KEY (`accountID`) REFERENCES `account` (`user`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_ja_job` FOREIGN KEY (`jobID`) REFERENCES `job` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Filtros para la tabla `video`
+--
+ALTER TABLE `video`
+  ADD CONSTRAINT `fk_video_settings` FOREIGN KEY (`settingsID`) REFERENCES `settings` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Filtros para la tabla `video_account`
+--
+ALTER TABLE `video_account`
+  ADD CONSTRAINT `fk_va_account` FOREIGN KEY (`accountID`) REFERENCES `account` (`user`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_va_video` FOREIGN KEY (`videoID`) REFERENCES `video` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Filtros para la tabla `vine`
+--
+ALTER TABLE `vine`
+  ADD CONSTRAINT `fk_vine_user` FOREIGN KEY (`userID`) REFERENCES `user` (`id`) ON UPDATE CASCADE;
+
+--
+-- Filtros para la tabla `vine_job`
+--
+ALTER TABLE `vine_job`
+  ADD CONSTRAINT `fk_vj_job` FOREIGN KEY (`jobID`) REFERENCES `job` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_vj_vine` FOREIGN KEY (`vineID`) REFERENCES `vine` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Filtros para la tabla `vine_video`
+--
+ALTER TABLE `vine_video`
+  ADD CONSTRAINT `fk_vv_video` FOREIGN KEY (`videoID`) REFERENCES `video` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_vv_vine` FOREIGN KEY (`vineID`) REFERENCES `vine` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

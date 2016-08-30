@@ -7,9 +7,10 @@ from subprocess import call
 import socket
 import os
 
+CONFIGURE_SCRIPT = './configure.sh'
+
 SOCKET_FOLDER = '/tmp/SCRAPE'
 SOCKET_PATH = SOCKET_FOLDER + '/SCRAPE_SOCKET'
-CONFIGURE_SCRIPT = './configure.sh'
 
 class Vine_Bot:
 	cp = []			# List of processes

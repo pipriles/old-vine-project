@@ -1,10 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
-from database import Database
 from datetime import datetime as dt
+from sys import stdout
 import requests as rq
 import json
 import re
+import sys
 
 class VineData:
 	vinedata = []
@@ -215,8 +216,6 @@ def fix(title):
 # Test
 if __name__ == '__main__':
 	
-	f = open("swag.json", "w")
-	
 	try:
 		url = raw_input("\nEnter a vine url: ")
 		limit = raw_input("Enter max num of videos: ")
@@ -227,9 +226,8 @@ if __name__ == '__main__':
 		print "You got ", int(limit) - vine.get_MissedCount()
 		print "\n", _url
 
-		vine.writeJson(f)
+		# Write the output
+		vine.writeJson(sys.stdout)
 
 	except KeyboardInterrupt:
 		print "\n\n What's the problem?\n"
-
-	f.close()
