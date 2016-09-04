@@ -1,4 +1,7 @@
 #!/usr/bin/env python2
+#
+# This module is all crap and nasty we need 
+# to fix this Carl
 
 import MySQLdb as mysql
 import codecs
@@ -18,3 +21,5 @@ class Database:
 		db = mysql.connect(self.host, self.user, self.password, self.db, charset='utf8mb4')
 		db.set_character_set('utf8mb4')
 		return db
+
+	# Here should be querys for each module
