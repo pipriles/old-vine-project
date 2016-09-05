@@ -230,4 +230,4 @@ if __name__ == '__main__':
 		vine.writeJson(sys.stdout)
 
 	except KeyboardInterrupt:
-		print "\n\n What's the problem?\n"
+		exit("What's the problem?")

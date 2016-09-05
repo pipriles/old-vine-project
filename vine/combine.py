@@ -21,6 +21,7 @@ def convert_video(job_id, vid):
 	dbc.execute("SELECT * FROM settings WHERE jobID = %s;" % job_id)
 	conf = dbc.fetchone()
 	db.commit()
+	db.close()
 
 	# Horrible magic ffmpeg command
 	command = \
@@ -42,8 +43,6 @@ def convert_video(job_id, vid):
 		db.commit()
 
 	print conf, vid
-
-	db.close()
 
 	return result
 

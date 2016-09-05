@@ -20,24 +20,25 @@ TOKEN_URI = "https://accounts.google.com/o/oauth2/token"
 
 PRIVACY_STATUS = ("public", "private", "unlisted")
 
-# This function is stupid, bad design
-# I'll get over of this shit
+def get_fucking_data(user, db):
+	""" Gets the fucking data from a user
+	
+	This data has the same order as the parameters for
+	OAuth2Credentials constructor from the google api
+	
+	Args:
+		user: The user id
+		db:	An instance to a Database object
 
-def get_fucking_data(user):
+	Returns:
+		A tuple with the user information
 
-	# - Access Token 	=> Database
-	# - Client id 		=> 892925157774-u9l5kehvb7fgnqnb86rdoj0a3ek6ktd0.apps.googleusercontent.com
-	# - Client secret 	=> k52sVi1FQCr4rj-NOICvSDDZ
-	# - Refresh Token 	=> Database
-	# - Token expiry 	=> Timestamp - This will be null
-	# - Token uri 		=> "https://accounts.google.com/o/oauth2/token"
-	# - User agent 		=> null
-
-	db = Database().connect_db()
-	dbc = db.cursor()
-
-	dbc.execute("SELECT * FROM account WHERE account.user = '%s';" % user)
-	token = dbc.fetchone()
+	Notes:
+		Remember to close your database connection
+	"""
+	
+	result = db.query("SELECT * FROM account WHERE account.user = '%s';" % user)
+	token = result.fetchone()
 
 	access_token = token[1]
 	refresh_token = token[5]
@@ -47,19 +48,37 @@ def get_fucking_data(user):
 
 
 def get_authenticated_service(data):
+	""" Gets an authenticated service from 
+	the data of a user
+	
+	Args:
+		data: A tuple with the user information
+
+	Returns:
+		A YouTube service
+
+	Notes:
+		The data tuple has the same order as
+		the parameters of the OAuth2Credentials
+
+		In this function we have to update 
+		the refresh token in the database!
+	"""
 
 	credentials = OAuth2Credentials(*data)
 
 	print "1 -->", credentials.access_token
 
 	http = credentials.authorize(httplib2.Http())
+	
+	# Refresh access token if expired
 	credentials.refresh(http)
 
-	# Refresh access token if expired
 	print "2 -->", credentials.access_token
 
 	return build(YOUTUBE_API_NAME, YOUTUBE_API_VERSION,
 		credentials=credentials)
+
 
 def init_upload(youtube, opt):
 	
@@ -90,8 +109,8 @@ def init_upload(youtube, opt):
 	except IOError:
 		exit("You lied to me!")
 
-
 	upload_video(upload_request)
+
 
 def upload_video(request):
 	result = None
@@ -123,12 +142,18 @@ if __name__ == '__main__':
 	parser.add_argument("--keywords", help="Video keywords", metavar='')
 	parser.add_argument("--privacyStatus", choices=PRIVACY_STATUS, default=PRIVACY_STATUS[1], 
 		help="Privacy status", metavar='')
+
 	args = parser.parse_args()
 
-	# Here i find the data for a user
-	data = get_fucking_data(args.user)
+	db = Database()
+	db.connect()
 
+	# Here i find the data for a user
+	data = get_fucking_data(args.user, db)
 	youtube = get_authenticated_service(data)
+
+	db.close()
+
 	try:
 		init_upload(youtube, args)
 	except HttpError, e:
