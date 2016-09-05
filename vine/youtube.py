@@ -121,8 +121,8 @@ if __name__ == '__main__':
 	parser.add_argument("--description", help="Video description", metavar='')
 	parser.add_argument("--category", default="22", help="Each category has an id", metavar='')
 	parser.add_argument("--keywords", help="Video keywords", metavar='')
-	parser.add_argument("--privacyStatus", choices=PRIVACY_STATUS, 
-		default=PRIVACY_STATUS[1], help="Privacy status", metavar='')
+	parser.add_argument("--privacyStatus", choices=PRIVACY_STATUS, default=PRIVACY_STATUS[1], 
+		help="Privacy status", metavar='')
 	args = parser.parse_args()
 
 	# Here i find the data for a user
