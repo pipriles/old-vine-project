@@ -8,7 +8,16 @@ import codecs
 codecs.register(lambda name: codecs.lookup('utf8') if name == 'utf8mb4' else None)
 
 class Database:
-	""" Database class object """
+	""" Database wrapper object
+	
+	Here we can change the credentials for the
+	connetion to the database.
+
+	Note that if you want to connect to the 
+	database you have to call the method connect
+	
+	"""
+
 	def __init__(self, host='localhost', user='vine_app', 
 			password='supervine', db='vine'):
 
@@ -29,7 +38,7 @@ class Database:
 	def close(self):
 		self.db.close()
 
-	# Here should be querys for each module
+	# Each module makes a query
 
 	def query(sql):
 		dbc = self.db.cursor()

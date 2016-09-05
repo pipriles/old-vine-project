@@ -7,6 +7,8 @@ from multiprocessing import Pool
 from functools import partial
 from datetime import datetime
 
+# Make a config file in the __init__.py 
+
 ffmpeg_bin = "ffmpeg"	# Linux
 video_path = "/var/www/html/res/videos/"
 image_path = "/var/www/html/res/images/"

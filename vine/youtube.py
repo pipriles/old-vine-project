@@ -10,13 +10,13 @@ from oauth2client.client import OAuth2Credentials
 
 from database import Database
 
-YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube"
-YOUTUBE_API_NAME = "youtube"
-YOUTUBE_API_VERSION = "v3"
-
 CLIENT_ID = "892925157774-u9l5kehvb7fgnqnb86rdoj0a3ek6ktd0.apps.googleusercontent.com"
 CLIENT_SECRET = "k52sVi1FQCr4rj-NOICvSDDZ"
 TOKEN_URI = "https://accounts.google.com/o/oauth2/token"
+
+YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube"
+YOUTUBE_API_NAME = "youtube"
+YOUTUBE_API_VERSION = "v3"
 
 PRIVACY_STATUS = ("public", "private", "unlisted")
 
