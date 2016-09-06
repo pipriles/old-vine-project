@@ -3,8 +3,8 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: localhost
--- Tiempo de generación: 29-08-2016 a las 23:25:50
--- Versión del servidor: 10.1.16-MariaDB
+-- Tiempo de generación: 06-09-2016 a las 01:14:06
+-- Versión del servidor: 10.1.17-MariaDB
 -- Versión de PHP: 7.0.10
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -28,8 +28,10 @@ SET time_zone = "+00:00";
 
 CREATE TABLE `account` (
   `user` varchar(50) NOT NULL,
-  `pass` varchar(75) NOT NULL,
-  `token` varchar(255) NOT NULL
+  `access_token` varchar(255) NOT NULL,
+  `token_type` varchar(30) NOT NULL,
+  `token_expiry` varchar(30) NOT NULL,
+  `refresh_token` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------

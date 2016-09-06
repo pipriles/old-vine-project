@@ -40,7 +40,7 @@ class Database:
 
 	# Each module makes a query
 
-	def query(sql):
+	def query(self, sql):
 		dbc = self.db.cursor()
 		dbc.execute(sql)
 		return dbc

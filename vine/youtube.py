@@ -2,11 +2,13 @@
 
 import httplib 		# For exceptions
 import httplib2
+import datetime
 
 from apiclient.discovery import build
 from apiclient.errors import HttpError
 from apiclient.http import MediaFileUpload
 from oauth2client.client import OAuth2Credentials
+from oauth2client.client import EXPIRY_FORMAT
 
 from database import Database
 
@@ -20,31 +22,53 @@ YOUTUBE_API_VERSION = "v3"
 
 PRIVACY_STATUS = ("public", "private", "unlisted")
 
-def get_fucking_data(user, db):
-	""" Gets the fucking data from a user
-	
-	This data has the same order as the parameters for
-	OAuth2Credentials constructor from the google api
-	
-	Args:
-		user: The user id
-		db:	An instance to a Database object
+class YouTubeData:
 
-	Returns:
-		A tuple with the user information
+	def __init__(self, user, db):
+		self.db = db
+		self.user_id = user
 
-	Notes:
-		Remember to close your database connection
-	"""
-	
-	result = db.query("SELECT * FROM account WHERE account.user = '%s';" % user)
-	token = result.fetchone()
+	def get_fucking_data(self):
+		""" Gets the fucking data from a user
+		
+		This data has the same order as the parameters for
+		OAuth2Credentials constructor from the google api
 
-	access_token = token[1]
-	refresh_token = token[5]
+		Returns:
+			A tuple with the user information
 
-	return (access_token, CLIENT_ID, CLIENT_SECRET,
-		refresh_token, None, TOKEN_URI, None,)
+		Notes:
+			Remember to close your database connection
+		"""
+		
+		sql = "SELECT * FROM account WHERE account.user = '%s';"
+		result = self.db.query(sql % user)
+		token = result.fetchone()
+
+		access_token = token[1]
+		refresh_token = token[4]
+		token_expiry = datetime.datetime.strptime(token[3], EXPIRY_FORMAT)
+
+		print token
+
+		return (access_token, CLIENT_ID, CLIENT_SECRET,
+			refresh_token, token_expiry, TOKEN_URI, None,)
+
+	def update_credentials(self, creds):
+
+		sql = """ 
+			UPDATE account SET
+				access_token = '',
+				token_expiry = '',
+				WHERE
+					user = '';
+		"""
+
+		token_info = creds.access_token, 
+			creds.token_expiry.strftime(EXPIRY_FORMAT),
+
+		result = db.query(sql % token_info)
+		db.commit()
 
 
 def get_authenticated_service(data):
@@ -60,21 +84,23 @@ def get_authenticated_service(data):
 	Notes:
 		The data tuple has the same order as
 		the parameters of the OAuth2Credentials
-
-		In this function we have to update 
-		the refresh token in the database!
 	"""
-
-	credentials = OAuth2Credentials(*data)
+	credentials = OAuth2Credentials(*data.get_fucking_data())
 
 	print "1 -->", credentials.access_token
+	print "  -->", credentials.token_expiry
 
 	http = credentials.authorize(httplib2.Http())
 	
 	# Refresh access token if expired
-	credentials.refresh(http)
+	print credentials.access_token_expired
+
+	if credentials.access_token_expired:
+		credentials.refresh(http)
+		data.update_credentials(credentials)
 
 	print "2 -->", credentials.access_token
+	print "  -->", credentials.token_expiry
 
 	return build(YOUTUBE_API_NAME, YOUTUBE_API_VERSION,
 		credentials=credentials)
@@ -149,7 +175,7 @@ if __name__ == '__main__':
 	db.connect()
 
 	# Here i find the data for a user
-	data = get_fucking_data(args.user, db)
+	data = YouTubeData(args.user, db)
 	youtube = get_authenticated_service(data)
 
 	db.close()
