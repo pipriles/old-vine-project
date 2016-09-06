@@ -25,10 +25,11 @@ PRIVACY_STATUS = ("public", "private", "unlisted")
 class YouTubeData:
 
 	def __init__(self, user, db):
-		self.db = db
-		self.user_id = user
+		self._db = db
+		self._user = user
 
 	def get_fucking_data(self):
+
 		""" Gets the fucking data from a user
 		
 		This data has the same order as the parameters for
@@ -42,36 +43,45 @@ class YouTubeData:
 		"""
 		
 		sql = "SELECT * FROM account WHERE account.user = '%s';"
-		result = self.db.query(sql % user)
+		result = self._db.query(sql % self._user)
 		token = result.fetchone()
 
 		access_token = token[1]
 		refresh_token = token[4]
 		token_expiry = datetime.datetime.strptime(token[3], EXPIRY_FORMAT)
 
-		print token
-
 		return (access_token, CLIENT_ID, CLIENT_SECRET,
 			refresh_token, token_expiry, TOKEN_URI, None,)
 
 	def update_credentials(self, creds):
 
-		sql = """ 
-			UPDATE account SET
-				access_token = '',
-				token_expiry = '',
-				WHERE
-					user = '';
+		""" Update the credentials for the user
+		
+		Args:
+			creds: Credentials object from the google api
+
+		Notes:
+			This function just updates the access token
+			and the token expiry 
+
 		"""
 
-		token_info = creds.access_token, 
-			creds.token_expiry.strftime(EXPIRY_FORMAT),
+		sql =  "UPDATE account SET"
+		sql += " access_token = '%s',"
+		sql += " token_expiry = '%s' "
+		sql += "WHERE"
+		sql += " user = '%s'"
 
-		result = db.query(sql % token_info)
-		db.commit()
+		token_info = (creds.access_token, 
+			creds.token_expiry.strftime(EXPIRY_FORMAT), 
+			self._user,)
+
+		result = self._db.query(sql % token_info)
+		self._db.commit()
 
 
 def get_authenticated_service(data):
+
 	""" Gets an authenticated service from 
 	the data of a user
 	
@@ -85,30 +95,30 @@ def get_authenticated_service(data):
 		The data tuple has the same order as
 		the parameters of the OAuth2Credentials
 	"""
-	credentials = OAuth2Credentials(*data.get_fucking_data())
 
-	print "1 -->", credentials.access_token
-	print "  -->", credentials.token_expiry
+	token_info = data.get_fucking_data()
+	credentials = OAuth2Credentials(*token_info)
 
 	http = credentials.authorize(httplib2.Http())
 	
 	# Refresh access token if expired
-	print credentials.access_token_expired
-
 	if credentials.access_token_expired:
 		credentials.refresh(http)
 		data.update_credentials(credentials)
-
-	print "2 -->", credentials.access_token
-	print "  -->", credentials.token_expiry
 
 	return build(YOUTUBE_API_NAME, YOUTUBE_API_VERSION,
 		credentials=credentials)
 
 
 def init_upload(youtube, opt):
+
+	""" Initialize a upload request
 	
-	# opt (Options for the video)
+	Args:
+		youtube: An authenticated youtube service
+		opt: The options for the video
+
+	"""
 
 	tags = None
 	if opt.keywords:
@@ -137,8 +147,8 @@ def init_upload(youtube, opt):
 
 	upload_video(upload_request)
 
-
 def upload_video(request):
+	
 	result = None
 	while result is None:	
 
