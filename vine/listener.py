@@ -1,9 +1,7 @@
 #!/usr/bin/python2
 
-# This module will listen for commands and execute them
-# This has a really bad design
-# I will modify this
-# REALLY
+# This module will listen for commands, interpret
+# them and make the script change its flow
 
 import os
 import socket
@@ -89,6 +87,9 @@ class ListenSocket:
 		if self._sock: 
 			self._sock.close()
 			clear_socket_path()
+
+	def __del__(self):
+		self.close()
 
 # Helper
 def clear_socket_path():

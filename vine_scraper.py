@@ -1,123 +1,169 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
+
+# This is the main script, the omnipotent,
+# the mind behind all this
+
+# Notes:
+# - Should i call the database in the constructor?
+# - What about the socket process?
+# - There are some variables with ugly names
+# - Maybe some unnecessary modules
+# - What about the job, should i make a class?
+# - This thing of timer sucks, will change it
+# - Ugly code, clean_zombies plz, i can't even see it
+# - Should i keep the connection to the database open?
 
 import vine
-from multiprocessing import Process, Pool
 from time import sleep, time
+from multiprocessing import Process, Value
+import socket
+import os
 
-def update_timer(job):
-	# 1 minute less to timer
-	dbc.execute("UPDATE job SET next_scrape = %s, next_combine = %s WHERE job.id = %s" % \
-		(
-			job[3] if job[4] <= 1 else job[4] - 1,	# Check scrape time left
-			job[6] if job[7] <= 1 else job[7] - 1,	# Check combine time left
-			job[0]
-		)
-	)
-
-def scrape_time(job, cp, cs):
+class Vine_Bot:
 	
-	if job[4] - 1 <= 0:
-		#print "\n Scraped started\n"
-		dbc.execute("UPDATE job SET job.status = CASE WHEN job.status = 0 THEN 1 ELSE 3 END WHERE job.id = %s" % job[0])
-		p = Process(name="%s-scr" % job[0], target=vine.vineData_SQL, args=(job,))
+	def __init__(self):
+		# Connect to database
+		self.db = vine.Database()
+		self.db.connect()
+		print 'Connected to database: vine'
 
-		# Add a process to current scrapes
-		cs[job[0]] = (cs[job[0]] + 1) if cs.get(job[0]) else 1
-		cp.append(p)
+		# Listen to socket
+		self.sp = Socket_Process()
+		self.sp.start()
+		print 'Listening to socket:', SOCKET_PATH
+
+		self.cp = []		# List of processes
+		self.cs = {}		# Current scrapes
+		self.wait_q = {}	# Wait queue
+
+	def __del__(self):
+		self.close()
+
+	def process_jobs(self):
 		
-		# Parallel scrape (No duplicate in same job)
-		p.start()
+		for job in self.get_jobs():
+			
+			print job 	# Just debug things
 
-def compilation_time(job, cp, cs, wait_p):
+			self.update_timer(job)
+			self.run_scrape(job)
+			self.run_convert(job)
 
-	if job[7] - 1 <= 0 or wait_p.get(job[0]) != None:
-		
-		# If there is scrapes running for the same job
-		# And there is compilations proccessing
-		if cs.get(job[0]) or len(wait_p) > 1:
+		self.db.commit()	# Update timer (for real)
 
-			# Add one to the pend process
-			if job[7] - 1 <= 0: 
-				wait_p[job[0]] = (wait_p[job[0]] + 1) if wait_p.get(job[0]) else 1
+	def update_timer(self, job):
+		self.dbc.execute("UPDATE job SET next_scrape = %s, next_combine = %s WHERE job.id = %s" % \
+			(
+				job[4] if job[5] <= 1 else job[5] - 1,	# Check scrape time left
+				job[7] if job[8] <= 1 else job[8] - 1,	# Check combine time left
+				job[0]
+			)
+		)
+		# 1 minute less to timer
+		# You should call commit here
 
-		else:
-			# Combine top n videos
-			#print "\n Compilation started\n"
-			dbc.execute("UPDATE job SET job.status = CASE WHEN job.status = 0 THEN 2 ELSE 3 END WHERE job.id = %s" % job[0])
-			p = Process(name="%s-com" % job[0], target=vine.combine_top_videos, args=(job,))
-			cp.append(p)
+	def run_scrape(self, job):
+		if job[5] - 1 <= 0:
+			print "\n Started to scrape \n"	# Just debug things
 
-			# Horrible conditional block
-			if wait_p.get(job[0]):
-				wait_p[job[0]] = wait_p[job[0]] - 1
-				if wait_p[job[0]] < 1:
-					del wait_p[job[0]]
+			sql = "UPDATE job SET job.status = CASE WHEN job.status = 0 THEN 1 ELSE 3 END WHERE job.id = %s"
+			self.dbc.execute(sql % job[0])
+			self.db.commit()
 
-			p.start() # Start compilation process
+			p = Process(name="%s-scr" % job[0], target=vine.vineData_SQL, args=(job,))
+			self.cp.append(p)
 
-def del_zombies(cp, cs):
-	# Join the darkside (good practice)
-	for x in xrange(len(cp)):
+			# Add a process to current scrapes
+			self.cs[job[0]] = (self.cs[job[0]] + 1) if self.cs.get(job[0]) else 1
+			
+			p.start()	# Parallel scrape (No duplicate in same job)
 
-		temp = cp.pop(0)
-		# Check for zombie process
-		if not temp.is_alive():	
-			temp.join()
-			i = int(temp.name.split("-")[0])
+	def run_convert(self, job):
+		if job[8] - 1 <= 0 or self.wait_q.get(job[0]) != None:
 
-			# if is a scrape process
-			if "scr" in temp.name:
-				#print "\n Scraped finished\n"
-				dbc.execute("UPDATE job SET job.status = CASE WHEN job.status = 3 THEN 2 ELSE 0 END WHERE job.id = %s" % i)
-				cs[i] -= 1
-				if cs[i] == 0: 
-					del cs[i]
+			# If there is scrapes running for the same job
+			# or there is compilations proccessing
+			if self.cs.get(job[0]) or len(self.wait_q) > 1:
+
+				# Add one to the pend process
+				if job[8] - 1 <= 0: 
+					self.wait_q[job[0]] = (self.wait_q[job[0]] + 1) if self.wait_q.get(job[0]) else 1
 			else:
-				dbc.execute("UPDATE job SET job.status = CASE WHEN job.status = 3 THEN 1 ELSE 0 END WHERE job.id = %s" % i)
-				#print "\n Compilation finished"
-		else:
-			cp.append(temp)
+				# Combine top n videos
+				print "\n Compilation started\n"	# Just debug things
 
-if __name__ == '__main__':
+				sql = "UPDATE job SET job.status = CASE WHEN job.status = 0 THEN 2 ELSE 3 END WHERE job.id = %s"
+				self.dbc.execute(sql % job[0])
+				self.db.commit()
+				
+				p = Process(name="%s-com" % job[0], target=vine.combine_top_videos, args=(job,))
+				self.cp.append(p)
 
-	cp = []			# List of processes
-	cs = {}			# Current scrapes
-	wait_q = {}		# Wait queue
+				# Horrible conditional block
+				if self.wait_q.get(job[0]):
+					self.wait_q[job[0]] = self.wait_q[job[0]] - 1
+					if self.wait_q[job[0]] < 1:
+						del self.wait_q[job[0]]
 
-	db = vine.Database().connect_db()
-	dbc = db.cursor()
+				p.start() # Start compilation process
 
-	try:
+	def clean_zombies(self):
+		for x in xrange(len(self.cp)):
+
+			temp = self.cp.pop(0)
+			if not temp.is_alive():	
+				
+				temp.join()
+				# Join the darkside (good practice)
+				
+				print temp.name 	# Just debug things
+				i = int(temp.name.split("-")[0])
+
+				# if is a scrape process
+				if "scr" in temp.name:
+					sql = "UPDATE job SET job.status = CASE WHEN job.status = 3 THEN 2 ELSE 0 END WHERE job.id = %s"
+					print "\n Scrape finished \n"	# Just debug things
+					self.cs[i] -= 1
+					if self.cs[i] == 0: 
+						del self.cs[i]
+
+				else:
+					sql = "UPDATE job SET job.status = CASE WHEN job.status = 3 THEN 1 ELSE 0 END WHERE job.id = %s"
+					print "\n Compilation finished \n"	# Just debug things
+
+				self.dbc.execute(sql % i)
+				self.db.commit()
+
+			else:
+				self.cp.append(temp)
+
+	def start(self):
 		while True:
 			now = time()
-			dbc.execute("SELECT script_status FROM settings")
-			status = dbc.fetchone()[0]
-			#print status
+			if self.sp.status.value: 
+				bot.process_jobs()
 
-			if status == 1:
-				sql = "SELECT * FROM job"
-				dbc.execute(sql)
+			bot.clean_zombies()	# Check for alive zombies :)
 
-				# Check all the jobs
-				jobs = dbc.fetchall()
-				for job in jobs:
+			print "\n Status:", self.sp.status.value
+			print " Wait moment \n ", self.cp, "\n"	# Just debug things
+			sleep(5 - int(time() - now))			# Wait some time
 
-					#print job
-					update_timer(job)
+	def close(self):
+		self.sp.close()
+		for p in self.cp: p.join()
+		if self.db.open:
+			self.db.commit()
+			self.db.close()
 
-					scrape_time(job, cp, cs)
-					compilation_time(job, cp, cs, wait_q)
+def get_jobs(db):
+	dbexecute('SELECT * FROM job')
+	self.db.commit()
+	return self.dbc.fetchall()
 
-			# Check for alive zombies :)
-			del_zombies(cp, cs)
-			db.commit()	# Update timer (for real)
 
-			# Wait 1 minute	
-			#print "\n Wait moment\n ", cp, "\n"
-			sleep(60 - int(time() - now))
-
-	except KeyboardInterrupt:
-		for p in cp: p.join()
-		
-	db.commit()
-	db.close()
+if __name__ == '__main__':
+	bot = Vine_Bot()
+	try: bot.start()
+	except KeyboardInterrupt: 
+		print "\nWhy? :("

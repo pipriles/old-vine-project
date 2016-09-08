@@ -1,5 +1,8 @@
 #!/usr/bin/python2
 
+# This module provides an interface for
+# Yotube data and functions
+
 import httplib 		# For exceptions
 import httplib2
 import datetime

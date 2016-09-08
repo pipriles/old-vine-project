@@ -1,9 +1,12 @@
 #!/usr/bin/env python2
-# This module is getting "better" :/
+
+# This module is a wrapper for the database
+# related functions
 
 import MySQLdb as mysql
 import codecs
 
+# Remember this is old and maybe is not useful now:
 # Without this doesn't work :(
 codecs.register(lambda name: codecs.lookup('utf8') if name == 'utf8mb4' else None)
 
@@ -36,7 +39,12 @@ class Database:
 		self.db.commit()
 
 	def close(self):
-		self.db.close()
+		if self.db.open:
+			self.db.commit()
+			self.db.close()
+
+	def __del__(self):
+		self.close()
 
 	# Each module makes a query
 

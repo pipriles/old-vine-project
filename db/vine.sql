@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: localhost
--- Tiempo de generación: 06-09-2016 a las 01:14:06
+-- Tiempo de generación: 08-09-2016 a las 04:37:06
 -- Versión del servidor: 10.1.17-MariaDB
 -- Versión de PHP: 7.0.10
 
@@ -34,6 +34,14 @@ CREATE TABLE `account` (
   `refresh_token` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+--
+-- Volcado de datos para la tabla `account`
+--
+
+INSERT INTO `account` (`user`, `access_token`, `token_type`, `token_expiry`, `refresh_token`) VALUES
+('UC8FkzeFJVG2n09iyh0HdA9w', 'ya29.CjBXAxmVZqBC9ve47nVxKhsFTU4VAPxyLfL2OZgy0A03UFtqc29yX3BTC33Swht3TSE', 'Bearer', '2016-09-07T03:46:30Z', '1/LW2zRZfFwXscVP9v6xqWNF7n7EQILj5FespfPE00QfI'),
+('UCCeommZnGWoKHEbdymv_sJQ', 'ya29.Ci9WA1bOUkuptymPUXYFZUP9jxWcs5Ml7Kuks8OG8JjkHumdgAS7aIO6XqE0n2rVzw', 'Bearer', '2016-09-06T06:32:57Z', '1/D7FrKsy2KpqDSPGgAhcKZgEKQZEyrhD3ZASYGn4d6gg');
+
 -- --------------------------------------------------------
 
 --
@@ -46,13 +54,13 @@ CREATE TABLE `job` (
   `name` varchar(100) NOT NULL,
   `url` varchar(100) NOT NULL,
   `scrape_limit` int(11) UNSIGNED NOT NULL,
-  `scrape` int(11) UNSIGNED NOT NULL,
-  `next_scrape` int(11) UNSIGNED NOT NULL,
+  `scrape_interval` int(11) UNSIGNED NOT NULL COMMENT 'Should be in minutes',
+  `next_scrape` datetime NOT NULL,
   `combine_limit` int(11) UNSIGNED NOT NULL,
-  `combine` int(11) UNSIGNED NOT NULL,
-  `next_combine` int(11) UNSIGNED NOT NULL,
+  `combine_interval` int(11) UNSIGNED NOT NULL COMMENT 'Should be in minutes',
+  `next_combine` datetime NOT NULL,
   `date_limit` int(11) UNSIGNED NOT NULL,
-  `status` tinyint(4) NOT NULL,
+  `status` tinyint(1) NOT NULL,
   `autoupload` tinyint(1) NOT NULL,
   `formula` text NOT NULL COMMENT 'This should not be used'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Scrape Jobs';
