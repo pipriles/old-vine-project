@@ -1,7 +1,6 @@
 #!/usr/bin/env python2
 
 from datetime import datetime as dt
-from sys import stdout
 import requests as rq
 import json
 import re

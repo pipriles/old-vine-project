@@ -12,6 +12,7 @@
 # - This thing of timer sucks, will change it
 # - Ugly code, clean_zombies plz, i can't even see it
 # - Should i keep the connection to the database open?
+# - Should i make a class for all this?
 
 import vine
 from time import sleep, time
@@ -50,17 +51,6 @@ class Vine_Bot:
 			self.run_convert(job)
 
 		self.db.commit()	# Update timer (for real)
-
-	def update_timer(self, job):
-		self.dbc.execute("UPDATE job SET next_scrape = %s, next_combine = %s WHERE job.id = %s" % \
-			(
-				job[4] if job[5] <= 1 else job[5] - 1,	# Check scrape time left
-				job[7] if job[8] <= 1 else job[8] - 1,	# Check combine time left
-				job[0]
-			)
-		)
-		# 1 minute less to timer
-		# You should call commit here
 
 	def run_scrape(self, job):
 		if job[5] - 1 <= 0:
@@ -156,14 +146,14 @@ class Vine_Bot:
 			self.db.commit()
 			self.db.close()
 
-def get_jobs(db):
-	dbexecute('SELECT * FROM job')
-	self.db.commit()
-	return self.dbc.fetchall()
+def main(args):
 
+	while True:
+		now = time()
+		
+		
+
+		sleep(1 - int(time() - now))
 
 if __name__ == '__main__':
-	bot = Vine_Bot()
-	try: bot.start()
-	except KeyboardInterrupt: 
-		print "\nWhy? :("
+	main(args)

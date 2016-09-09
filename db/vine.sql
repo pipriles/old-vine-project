@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: localhost
--- Tiempo de generación: 08-09-2016 a las 04:37:06
+-- Tiempo de generación: 09-09-2016 a las 06:42:57
 -- Versión del servidor: 10.1.17-MariaDB
 -- Versión de PHP: 7.0.10
 
@@ -60,7 +60,7 @@ CREATE TABLE `job` (
   `combine_interval` int(11) UNSIGNED NOT NULL COMMENT 'Should be in minutes',
   `next_combine` datetime NOT NULL,
   `date_limit` int(11) UNSIGNED NOT NULL,
-  `status` tinyint(1) NOT NULL,
+  `status` char(3) NOT NULL,
   `autoupload` tinyint(1) NOT NULL,
   `formula` text NOT NULL COMMENT 'This should not be used'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Scrape Jobs';
