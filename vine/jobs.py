@@ -14,11 +14,19 @@ class JobData:
 	
 	def __init__(self, db):
 		self.jobs = []
-		self.refresh_jobs(db)
-
-	def refresh_jobs(self, db):
+		self.clear_status(db)
 		jobs = self.db.query('SELECT * FROM job')
 		self.jobs = [VineJob(*job) for job in jobs]
+
+	def __iter__(self, db):
+		return self.jobs
+
+	def clear_status(self, db):
+		db.query("UPDATE job SET job.status = '000'")
+
+	def refresh_jobs(self, db):
+		for job in self.jobs:
+			job.refresh_job(db)
 
 	def need_scrape(self):
 		return [x for x in self.jobs if x.need_scrape()]
@@ -28,12 +36,12 @@ class JobData:
 
 class VineJob:
 
-	def __init__(self, id, settings_id, name, url, 
+	def __init__(self, _id, settings_id, name, url, 
 		scrape_limit, scrape_interval, next_scrape, 
 		combine_limit, combine_interval, next_combine, 
 		date_limit, status, autoupload, formula):
 		
-		self.id = id
+		self._id = _id
 		self.settings_id = settings_id
 		self.name = name
 		self.url = url
@@ -54,9 +62,17 @@ class VineJob:
 			self.next_combine = to_datetime(next_combine)
 
 		self.date_limit = date_limit
+
 		self.status = status
+
 		self.autoupload = autoupload
 		self.formula = formula
+
+	def refresh_job(self, db):
+		sql = "SELECT * FROM job WHERE job.id = %s"
+		dbc = self.db.query(sql % self._id)
+		new = dbc.fetchone()
+		self.__init__(*new)
 
 	def need_scrape(self)
 		present = dt.datetime.now()
@@ -67,25 +83,31 @@ class VineJob:
 		return True if self.next_combine <= present else False
 		
 	def started(self, key, db):
-		s = job[STATUS]
+		s = self.status
 		code = "%s%s%s"
 		new_status = {
 			'S': code % ('1', s[1], s[2]),
 			'C': code % (s[0], '1', s[2]),
 			'U': code % (s[0], s[1], '1')
 		}[key]
-		sql  = "UPDATE job SET job.status = %s WHERE job.id = %s"
-		db.query(sql % (new_status, self.id))
 		self.status = new_status
+		sql  = "UPDATE job SET job.status = '%s' WHERE job.id = '%s'"
+		db.query(sql % (new_status, self.id))
 
 	def finished(self, key, db):
-		s = job[STATUS]
+		s = self.status
 		code = "%s%s%s"
 		new_status = {
 			'S': code % ('0', s[1], s[2]),
 			'C': code % (s[0], '0', s[2]),
 			'U': code % (s[0], s[1], '0')
 		}[key]
-		sql  = "UPDATE job SET job.status = %s WHERE job.id = %s"
-		db.query(sql % (new_status, self.id))
 		self.status = new_status
+		sql  = "UPDATE job SET job.status = '%s' WHERE job.id = '%s'"
+		db.query(sql % (new_status, self.id))
+
+	def can_scrape(self):
+		return self.status[0] == '0'
+
+	def can_combine(self):
+		return True if self.status[:2] == '00' else False
