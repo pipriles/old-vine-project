@@ -159,14 +159,12 @@ class VineData:
 		self.job = job
 
 	def insert_user(self, user):
-
 		sql  = 'INSERT IGNORE INTO user (id, name, banned)'
 		sql += 'VALUES ("%s", "%s", 0)'
 
 		self.db.query(sql % args)
 
 	def insert_vine(self, vine):
-
 		sql  = "INSERT INTO vine (id, url, title, userID, views, likes, comments, reposts, date)"
 		sql += "VALUES ("%s", "%s", "%s", "%s", %s, %s, %s, %s, "%s")"
 		sql += "ON DUPLICATE KEY UPDATE"
@@ -195,20 +193,21 @@ class ScrapeProcess(Process):
 	def run(sef):
 		self.scrape_data()
 		data = VineData(self._job, self._db)
-		for vine in self._scrape.vinedata:
-			data.insert_user(args_for_insert_user(vine))
-			data.insert_vine(args_for_insert_vine(vine))
-			data.link_to_job(vine['permalinkUrl'])
-			
-		self._db.commit()
-		self._db.close()
+		try:
+			for vine in self._scrape.vinedata:
+				data.insert_user(args_for_insert_user(vine))
+				data.insert_vine(args_for_insert_vine(vine))
+				data.link_to_job(vine['permalinkUrl'])
 
-	def scrape_data(self):
+		finally:
+			self._db.commit()
+			self._db.close()
+
+	def scrape_data(self, size=20):
 		url = self._job.url
 		limit = self._job.scrape_limit
 		self._scrape = Scraper(url, limit)
 
-		size = 20	# Default request size
 		return self._scrape.get_VineData(size)
 
 # Helpers
@@ -230,69 +229,20 @@ def args_for_insert_vine(vine):
 		video['reposts'], created.strftime('%Y-%m-%d %H:%M:%S'), 
 		video['loops'], video['likes'], video['comments'], video['reposts'],)
 
-def vineData_SQL(job, size=20):
-
-	## Setting up encode
-	db = Database().connect_db()
-	dbc = db.cursor()
-	dbc.execute('SET NAMES utf8mb4;')
-	dbc.execute('SET CHARACTER SET utf8mb4;')
-	dbc.execute('SET character_set_connection=utf8mb4;')
-	db.commit()
-
-	vine = VineData(job[2], job[3])
-	_url = vine.get_VineData(size)
-	# precious data
-
-	for video in vine.vinedata:
-
-		sql = 'INSERT IGNORE INTO user (id, name, banned) VALUES ("%s", "%s", 0)'
-		dbc.execute(sql % )
-		db.commit()
-
-		sql = """
-			INSERT INTO vine (id, url, title, userID, views, likes, comments, reposts, date) 
-			VALUES ("%s", "%s", "%s", "%s", %s, %s, %s, %s, "%s") 
-			ON DUPLICATE KEY UPDATE
-			views = %s, likes = %s, comments = %s, reposts = %s, dbdate = NOW()
-		"""
-
-		# Filter emoji and hashtags
-		title = fix(video['description'])
-
-		# Convert the time in a compatible time for the database
-		created = dt.strptime(video['created'], "%Y-%m-%dT%H:%M:%S.%f")
-
-		dbc.execute(sql % (\
-			video['permalinkUrl'], \
-			video['videoUrl'], \
-			title, \
-			video['userId'], \
-			video['loops'], \
-			video['likes'], \
-			video['comments'], \
-			video['reposts'], \
-			created.strftime('%Y-%m-%d %H:%M:%S'), \
-			video['loops'], \
-			video['likes'], \
-			video['comments'], \
-			video['reposts'])
-		)
-		db.commit()
-
-		# Insert video relation with job
-		dbc.executemany("INSERT IGNORE INTO vine_job (jobID, vineID, used) VALUES (%s, %s, 0)", [(job[0], video['permalinkUrl'])])
-		db.commit()
-
-	db.close()
-
+# Ugly crap
 def fix(title):
 	if "w/" in title: title = title[:title.find("w/")-1]
 	elif "W/" in title: title = title[:title.find("W/")-1]
 	title = re.sub("[^a-zA-Z 0-9#@]", '', title).split()
 	title = ' '.join(filter(lambda x: '#' not in x and '@' not in x, title))
-	
+
 	return title
+
+# Maybe useful
+def set_utf8mb4(db):
+	db.query('SET NAMES utf8mb4;')
+	db.query('SET CHARACTER SET utf8mb4;')
+	db.query('SET character_set_connection=utf8mb4;')
 
 # Test
 if __name__ == '__main__':
