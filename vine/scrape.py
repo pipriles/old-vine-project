@@ -1,12 +1,16 @@
 #!/usr/bin/env python2
 
-from datetime import datetime as dt
 import requests as rq
 import json
 import re
 import sys
 
-class VineData:
+from datetime import datetime as dt
+from multiprocessing import Process
+
+from database import Database
+
+class Scraper:
 	vinedata = []
 
 	def __init__(self, url, limit="20"):
@@ -148,6 +152,84 @@ class VineData:
 	def get_MissedCount(self):
 		return int(self.limit) - self.vineCount
 
+class VineData:
+
+	def __init__(self, job, db):
+		self.db = db
+		self.job = job
+
+	def insert_user(self, user):
+
+		sql  = 'INSERT IGNORE INTO user (id, name, banned)'
+		sql += 'VALUES ("%s", "%s", 0)'
+
+		self.db.query(sql % args)
+
+	def insert_vine(self, vine):
+
+		sql  = "INSERT INTO vine (id, url, title, userID, views, likes, comments, reposts, date)"
+		sql += "VALUES ("%s", "%s", "%s", "%s", %s, %s, %s, %s, "%s")"
+		sql += "ON DUPLICATE KEY UPDATE"
+		sql += "views = %s, likes = %s, comments = %s, reposts = %s, dbdate = NOW()"
+
+		self.db.query(sql % vine)
+
+	def link_to_job(self, vine):
+		sql  = "INSERT IGNORE INTO vine_job (jobID, vineID, used)"
+		sql += "VALUES (%s, %s, 0)"
+
+		args = (self.job._id, vine)
+		self.db.query(sql % args)
+
+
+class ScrapeProcess(Process):
+
+	def __init__(self, job):
+		name = "Scrape Process %s" % job._id
+		super(ScrapeProcess, self).__init__(name=name)
+		self._job = job
+		self._db = Database()
+		self._db.connect()
+		self._job.start_scrape(self._db)
+
+	def run(sef):
+		self.scrape_data()
+		data = VineData(self._job, self._db)
+		for vine in self._scrape.vinedata:
+			data.insert_user(args_for_insert_user(vine))
+			data.insert_vine(args_for_insert_vine(vine))
+			data.link_to_job(vine['permalinkUrl'])
+			
+		self._db.commit()
+		self._db.close()
+
+	def scrape_data(self):
+		url = self._job.url
+		limit = self._job.scrape_limit
+		self._scrape = Scraper(url, limit)
+
+		size = 20	# Default request size
+		return self._scrape.get_VineData(size)
+
+# Helpers
+def args_for_insert_user(vine):
+	# Por que reemplazar las comillas dobles
+	# por las comillas simples?
+	return (vine['userId'], vine['username'].replace("\"", "\'"))
+
+def args_for_insert_vine(vine):
+
+	# Filter emoji and hashtags
+	title = fix(video['description'])
+
+	# Convert the time in a compatible time for the database
+	created = dt.strptime(video['created'], "%Y-%m-%dT%H:%M:%S.%f")
+	
+	return (video['permalinkUrl'], video['videoUrl'], title, 
+		video['userId'], video['loops'], video['likes'], video['comments'], 
+		video['reposts'], created.strftime('%Y-%m-%d %H:%M:%S'), 
+		video['loops'], video['likes'], video['comments'], video['reposts'],)
+
 def vineData_SQL(job, size=20):
 
 	## Setting up encode
@@ -165,7 +247,7 @@ def vineData_SQL(job, size=20):
 	for video in vine.vinedata:
 
 		sql = 'INSERT IGNORE INTO user (id, name, banned) VALUES ("%s", "%s", 0)'
-		dbc.execute(sql % (video['userId'], video['username'].replace("\"", "\'")))
+		dbc.execute(sql % )
 		db.commit()
 
 		sql = """
@@ -220,7 +302,7 @@ if __name__ == '__main__':
 		limit = raw_input("Enter max num of videos: ")
 		size = 20
 
-		vine = VineData(url, limit)	
+		vine = Scraper(url, limit)	
 		_url = vine.get_VineData(size)
 		print "You got ", int(limit) - vine.get_MissedCount()
 		print "\n", _url
