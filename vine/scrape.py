@@ -160,13 +160,13 @@ class VineData:
 
 	def insert_user(self, user):
 		sql  = 'INSERT IGNORE INTO user (id, name, banned)'
-		sql += 'VALUES ("%s", "%s", 0)'
+		sql += "VALUES ('%s', '%s', 0)"
 
 		self.db.query(sql % args)
 
 	def insert_vine(self, vine):
 		sql  = "INSERT INTO vine (id, url, title, userID, views, likes, comments, reposts, date)"
-		sql += "VALUES ("%s", "%s", "%s", "%s", %s, %s, %s, %s, "%s")"
+		sql += "VALUES ('%s', '%s', '%s', '%s', %s, %s, %s, %s, '%s')"
 		sql += "ON DUPLICATE KEY UPDATE"
 		sql += "views = %s, likes = %s, comments = %s, reposts = %s, dbdate = NOW()"
 
@@ -247,18 +247,19 @@ def set_utf8mb4(db):
 # Test
 if __name__ == '__main__':
 	
-	try:
-		url = raw_input("\nEnter a vine url: ")
-		limit = raw_input("Enter max num of videos: ")
-		size = 20
+	import argparse
 
-		vine = Scraper(url, limit)	
-		_url = vine.get_VineData(size)
-		print "You got ", int(limit) - vine.get_MissedCount()
-		print "\n", _url
+	parser = argparse.ArgumentParser(description="This is a script to scrape a vine url")
+	parser.add_argument("-u", "--url", required=True, help="Url to be scraped", metavar="https://vine.co/...")
+	parser.add_argument("-s", "--size", default=10, help="Size of the request")
+	args = parser.parse_args()
 
-		# Write the output
-		vine.writeJson(sys.stdout)
+	vine = Scraper(args.url, args.size)	
+	_url = vine.get_VineData()
 
-	except KeyboardInterrupt:
-		exit("What's the problem?")
+	# Write the output
+	vine.writeJson(sys.stdout)
+
+	print "\nYou got ", int(args.size) - vine.get_MissedCount()
+	print "\n", _url
+	
