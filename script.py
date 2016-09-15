@@ -7,8 +7,11 @@
 # - Should i made a class for this?
 # - Process can combine videos at the same time for different jobs
 
-import vine
+import argparse
+import logging
 from time import sleep, time
+
+import vine
 
 sp = vine.SocketProcess()
 jobs = vine.JobData()
@@ -19,19 +22,20 @@ def initialize():
 	try:
 		# Listen to socket
 		sp.start()
-		print 'Listening to socket...'
+		logging.info('Listening to socket...')
 
-		print "Connecting to database..."
+		logging.info("Connecting to database...")
 		db = vine.Database()
 		db.connect()
 		jobs.init_jobs(db)
 		db.close()
-		print "Connected to database!"
-	except:
-		pass
+		logging.info("Connected to database!")
+	except Exception, e:
+		raise e
 
 def end_with_this():
 	sp.stop()
+	sp.join()
 	for p in running: 
 		p.join()
 
@@ -75,27 +79,35 @@ def clean_zombies():
 def wait(old_time):
 	interval = time() - old_time
 	if interval <= 1:
-		print "Waiting", 1-interval, "seconds"
+		logging.debug("Waiting %s seconds", 1-interval)
 		sleep(1 - interval)
 
 Status = True
 
 def main():
-	initialize()
 	try:
+		initialize()
 		while True:
 			old_time = time()
 			if Status: process_jobs()
 			clean_zombies()
 			wait(old_time)
+			logging.debug("SOCKET PROCESS: %s", sp.is_alive())
 	except KeyboardInterrupt:
-		print ''
+		logging.debug("\nGood bye")
 	except:
-		print "Maybe mysql server is not running..."
+		logging.critical("Maybe mysql server is not running...")
 
 	finally:
 		end_with_this()
 
-
 if __name__ == '__main__':
+
+	parser = argparse.ArgumentParser(description="Here is where the magic happens")
+	parser.add_argument("--log-level", default="WARNING", help="Filter log messages")
+
+	args = parser.parse_args()
+	attr = getattr(logging, args.log_level, 30)
+	logging.basicConfig(level=attr, format="%(message)s")
+
 	main()

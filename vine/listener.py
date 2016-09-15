@@ -7,6 +7,7 @@ import os
 import socket
 import multiprocessing as mp
 import subprocess as sp
+import logging
 
 CONFIGURE_SCRIPT =  '/home/oswald/Documents/Work'
 CONFIGURE_SCRIPT += '/Vine Scraper/script/configure.sh'
@@ -15,6 +16,8 @@ SOCKET_FOLDER = '/tmp/SCRAPE'
 SOCKET_PATH = SOCKET_FOLDER + '/SCRAPE_SOCKET'
 
 MAX_CLIENTS = 1
+
+logger = logging.getLogger(__name__)
 
 class SocketProcess(mp.Process):
 
@@ -25,11 +28,17 @@ class SocketProcess(mp.Process):
 
 	def run(self):
 		while True:
-			self._sock.wait()
 			try:
+				self._sock.wait()
 				msg = self._sock.recv()
-				print '-> Message:', msg	
+				logger.debug('-> Message: %s', msg)
 				self.interpret_msg(msg)()
+			except KeyboardInterrupt:
+				logging.info("Socket process finished normally")
+				break
+			except Exception, e:
+				logging.critical("Socket process went bananas: %s", e)
+				break
 			finally:
 				self._sock.disconnect()
 
@@ -43,14 +52,13 @@ class SocketProcess(mp.Process):
 
 	def stop(self):
 		self._sock.close()
-		self.terminate()
 		# Should i call join?
 
 	def interpret_msg(self, msg):
 		msg = msg.upper()
 		return {
 			'CHANGE STATUS': self.toggle_status,
-			'GET STATUS': self.get_status
+			'GET STATUS': self.get_status,
 		}[msg]
 
 class ListenSocket:
@@ -67,13 +75,14 @@ class ListenSocket:
 	def wait(self):
 		try:
 			self._conn = self._sock.accept()[0]
-		except:
-			self.close()
+		except Exception, e:
+			raise e
 
 	def recv(self, buff=1024):
 		if self._conn:
-			msg = self._conn.recv(buff)
-		return msg
+			return self._conn.recv(buff)
+		else:
+			return ''
 
 	def send(self, msg):
 		if self._conn:
@@ -88,6 +97,7 @@ class ListenSocket:
 		self.disconnect()
 		if self._sock: 
 			self._sock.close()
+			self._sock = None
 			clear_socket_path()
 
 	def __del__(self):
