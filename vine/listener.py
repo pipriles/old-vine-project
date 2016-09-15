@@ -19,7 +19,7 @@ MAX_CLIENTS = 1
 class SocketProcess(mp.Process):
 
 	def __init__(self, id="Listen_Process", sock=None):
-		super(Socket_Process, self).__init__(name=id)
+		super(SocketProcess, self).__init__(name=id)
 		self._sock = ListenSocket()
 		self.SCRIPT_STATUS = mp.Value('i', 1)
 
@@ -65,8 +65,10 @@ class ListenSocket:
 		self._conn = None
 
 	def wait(self):
-		print 'Waiting for a connection \n'
-		self._conn = self._sock.accept()[0]
+		try:
+			self._conn = self._sock.accept()[0]
+		except:
+			self.close()
 
 	def recv(self, buff=1024):
 		if self._conn:
@@ -106,7 +108,7 @@ if __name__ == '__main__':
 
 	# Listener Test
 	
-	test = Socket_Process()
+	test = SocketProcess()
 	test.start()
 
 	try: 

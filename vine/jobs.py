@@ -18,17 +18,19 @@ MAX_COMBINE = 1
 
 class JobData:
 	
-	def __init__(self, db):
+	def __init__(self):
 		self.jobs = []
-		self.clear_status(db)
-		jobs = self.db.query('SELECT * FROM job')
-		self.jobs = [VineJob(*job) for job in jobs]
 
-	def __iter__(self, db):
-		return self.jobs
+	def __iter__(self):
+		return iter(self.jobs)
 
 	def clear_status(self, db):
 		db.query("UPDATE job SET job.status = '000'")
+
+	def init_jobs(self, db):
+		self.clear_status(db)
+		jobs = db.query('SELECT * FROM job')
+		self.jobs = [VineJob(*job) for job in jobs]
 
 	def refresh_jobs(self, db):
 		for job in self.jobs:
@@ -73,7 +75,7 @@ class VineJob:
 	def refresh_job(self, db):
 		
 		sql = "SELECT * FROM job WHERE job.id = %s"
-		dbc = self.db.query(sql % self._id)
+		dbc = db.query(sql % self._id)
 		new = dbc.fetchone()
 		self.__init__(*new)
 

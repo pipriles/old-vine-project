@@ -3,30 +3,32 @@
 # This is the main script, the omnipotent,
 # the mind behind all this
 
-# Note:
+# Notes:
 # - Should i made a class for this?
 # - Process can combine videos at the same time for different jobs
 
 import vine
 from time import sleep, time
 
+sp = vine.SocketProcess()
+jobs = vine.JobData()
+
 running = []	# Running processes
 
 def initialize():
-	global jobs
-	global sp
 	try:
 		# Listen to socket
-		sp = vine.SocketProcess()
 		sp.start()
-		print 'Listening to socket:', SOCKET_PATH
+		print 'Listening to socket...'
 
+		print "Connecting to database..."
 		db = vine.Database()
-		jobs = vine.JobData(db)
+		db.connect()
+		jobs.init_jobs(db)
 		db.close()
-
-	except Exception, e:
-		raise e
+		print "Connected to database!"
+	except:
+		pass
 
 def end_with_this():
 	sp.stop()
@@ -73,6 +75,7 @@ def clean_zombies():
 def wait(old_time):
 	interval = time() - old_time
 	if interval <= 1:
+		print "Waiting", 1-interval, "seconds"
 		sleep(1 - interval)
 
 Status = True
@@ -85,6 +88,10 @@ def main():
 			if Status: process_jobs()
 			clean_zombies()
 			wait(old_time)
+	except KeyboardInterrupt:
+		print ''
+	except:
+		print "Maybe mysql server is not running..."
 
 	finally:
 		end_with_this()
