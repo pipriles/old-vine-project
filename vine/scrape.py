@@ -190,7 +190,7 @@ class ScrapeProcess(Process):
 		self._db.connect()
 		self._job.start_scrape(self._db)
 
-	def run(sef):
+	def run(self):
 		self.scrape_data()
 		data = VineData(self._job, self._db)
 		try:
@@ -261,5 +261,5 @@ if __name__ == '__main__':
 	vine.writeJson(sys.stdout)
 
 	print "\nYou got ", int(args.size) - vine.get_MissedCount()
-	print "\n", _url
+	print _url
 	

@@ -16,7 +16,7 @@ SOCKET_PATH = SOCKET_FOLDER + '/SCRAPE_SOCKET'
 
 MAX_CLIENTS = 1
 
-class Socket_Process(mp.Process):
+class SocketProcess(mp.Process):
 
 	def __init__(self, id="Listen_Process", sock=None):
 		super(Socket_Process, self).__init__(name=id)

@@ -17,7 +17,7 @@ def initialize():
 	global sp
 	try:
 		# Listen to socket
-		sp = vine.Socket_Process()
+		sp = vine.SocketProcess()
 		sp.start()
 		print 'Listening to socket:', SOCKET_PATH
 
@@ -36,7 +36,7 @@ def end_with_this():
 def run_scrape(job):
 
 	if job.can_scrape():
-		if job.scrape_pending() 
+		if job.scrape_pending() \
 		or job.scrape_time():
 			p = vine.ScrapeProcess(job)
 			running.append(p)
@@ -48,7 +48,7 @@ def run_scrape(job):
 def run_combine(job):
 
 	if job.can_combine():
-		if job.combine_pending() 
+		if job.combine_pending() \
 		or job.combine_time():
 			p = vine.CombineProcess(job)
 			running.append(p)
@@ -78,8 +78,8 @@ def wait(old_time):
 Status = True
 
 def main():
+	initialize()
 	try:
-		initialize()
 		while True:
 			old_time = time()
 			if Status: process_jobs()

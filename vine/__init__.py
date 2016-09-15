@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
-from scrape import VineData, vineData_SQL
-from combine import combine_top_videos
-from download import download_top_videos
 from database import Database
+from jobs import JobData
+from listener import SocketProcess
+from scrape import ScrapeProcess
+from combine import CombineProcess
 
-__all__ = ['VineData', 'vineData_SQL', 'combine_top_videos', 'download_top_videos', 'Database']
+__all__ = ['JobData', 'SocketProcess', 'ScrapeProcess', 'CombineProcess', 'Database']

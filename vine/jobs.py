@@ -77,7 +77,7 @@ class VineJob:
 		new = dbc.fetchone()
 		self.__init__(*new)
 
-	def scrape_time(self)
+	def scrape_time(self):
 		
 		present = dt.datetime.now()
 		return True if self.next_scrape <= present else False
