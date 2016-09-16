@@ -34,10 +34,9 @@ class SocketProcess(mp.Process):
 				logger.debug('-> Message: %s', msg)
 				self.interpret_msg(msg)()
 			except KeyboardInterrupt:
-				logging.info("Socket process finished normally")
 				break
-			except Exception, e:
-				logging.critical("Socket process went bananas: %s", e)
+			except Exception as e:
+				logging.critical("Socket process: %s", type(e).__name__)
 				break
 			finally:
 				self._sock.disconnect()
@@ -52,7 +51,7 @@ class SocketProcess(mp.Process):
 
 	def stop(self):
 		self._sock.close()
-		# Should i call join?
+		# Should i call terminate?
 
 	def interpret_msg(self, msg):
 		msg = msg.upper()
@@ -73,10 +72,7 @@ class ListenSocket:
 		self._conn = None
 
 	def wait(self):
-		try:
-			self._conn = self._sock.accept()[0]
-		except Exception, e:
-			raise e
+		self._conn = self._sock.accept()[0]
 
 	def recv(self, buff=1024):
 		if self._conn:
