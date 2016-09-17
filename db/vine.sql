@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: localhost
--- Tiempo de generación: 09-09-2016 a las 06:42:57
+-- Tiempo de generación: 16-09-2016 a las 00:12:29
 -- Versión del servidor: 10.1.17-MariaDB
 -- Versión de PHP: 7.0.10
 
@@ -124,7 +124,7 @@ CREATE TABLE `settings` (
 
 CREATE TABLE `user` (
   `id` varchar(50) NOT NULL,
-  `name` varchar(30) NOT NULL,
+  `name` varchar(30) CHARACTER SET utf8mb4 NOT NULL,
   `banned` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

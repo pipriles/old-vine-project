@@ -25,8 +25,10 @@ class SocketProcess(mp.Process):
 		super(SocketProcess, self).__init__(name=id)
 		self._sock = ListenSocket()
 		self.SCRIPT_STATUS = mp.Value('i', 1)
+		self.DIRTY_JOBS = mp.Value('i', 0)
 
 	def run(self):
+		logger.info('Listening to socket...')
 		while True:
 			try:
 				self._sock.wait()
@@ -36,7 +38,7 @@ class SocketProcess(mp.Process):
 			except KeyboardInterrupt:
 				break
 			except Exception as e:
-				logging.critical("Socket process: %s", type(e).__name__)
+				logger.critical("Socket process: %s", type(e).__name__)
 				break
 			finally:
 				self._sock.disconnect()
@@ -45,19 +47,34 @@ class SocketProcess(mp.Process):
 		new_status = not self.SCRIPT_STATUS.value
 		self.SCRIPT_STATUS.value = new_status
 
-	def get_status(self):
+	def __get_status(self):
 		status = str(self.SCRIPT_STATUS.value)
 		self._sock.send(status)
 
+	def refresh_jobs_on(self):
+		self.DIRTY_JOBS.value = 1
+
+	def refresh_jobs_off(self):
+		self.DIRTY_JOBS.value = 0
+
+	def need_refresh_jobs(self):
+		if self.DIRTY_JOBS.value:
+			logger.debug("Script needs to refresh jobs")
+			return True
+		else:
+			return False
+
 	def stop(self):
 		self._sock.close()
+		self.terminate()
 		# Should i call terminate?
 
 	def interpret_msg(self, msg):
 		msg = msg.upper()
 		return {
 			'CHANGE STATUS': self.toggle_status,
-			'GET STATUS': self.get_status,
+			'GET STATUS': self.__get_status,
+			'REFRESH JOBS': self.refresh_jobs
 		}[msg]
 
 class ListenSocket:
@@ -72,6 +89,7 @@ class ListenSocket:
 		self._conn = None
 
 	def wait(self):
+		logger.info('Waiting for connection...')
 		self._conn = self._sock.accept()[0]
 
 	def recv(self, buff=1024):

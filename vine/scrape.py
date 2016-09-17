@@ -4,11 +4,14 @@ import requests as rq
 import json
 import re
 import sys
+import logging
 
 from datetime import datetime as dt
 from multiprocessing import Process
 
 from database import Database
+
+logger = logging.getLogger(__name__)
 
 class Scraper:
 	vinedata = []
@@ -159,22 +162,26 @@ class VineData:
 		self.job = job
 
 	def insert_user(self, user):
-		sql  = 'INSERT IGNORE INTO user (id, name, banned)'
-		sql += "VALUES ('%s', '%s', 0)"
+		sql  = "INSERT INTO user (id, name, banned)"
+		sql += ' VALUES ("%s", "%s", 0) '
+		sql += "ON DUPLICATE KEY UPDATE"
+		sql += " id=id"
 
-		self.db.query(sql % args)
+		self.db.query(sql % user)
 
 	def insert_vine(self, vine):
 		sql  = "INSERT INTO vine (id, url, title, userID, views, likes, comments, reposts, date)"
-		sql += "VALUES ('%s', '%s', '%s', '%s', %s, %s, %s, %s, '%s')"
+		sql += ' VALUES ("%s", "%s", "%s", "%s", %s, %s, %s, %s, "%s") '
 		sql += "ON DUPLICATE KEY UPDATE"
-		sql += "views = %s, likes = %s, comments = %s, reposts = %s, dbdate = NOW()"
+		sql += " views = %s, likes = %s, comments = %s, reposts = %s, dbdate = NOW()"
 
 		self.db.query(sql % vine)
 
 	def link_to_job(self, vine):
-		sql  = "INSERT IGNORE INTO vine_job (jobID, vineID, used)"
-		sql += "VALUES (%s, %s, 0)"
+		sql  = "INSERT INTO vine_job (jobID, vineID, used)"
+		sql += ' VALUES (%s, "%s", 0) '
+		sql += "ON DUPLICATE KEY UPDATE"
+		sql += " jobID=jobID"
 
 		args = (self.job._id, vine)
 		self.db.query(sql % args)
@@ -185,6 +192,7 @@ class ScrapeProcess(Process):
 	def __init__(self, job):
 		name = "Scrape Process %s" % job._id
 		super(ScrapeProcess, self).__init__(name=name)
+		logger.info("Started scrape process")
 		self._job = job
 		self._db = Database()
 		self._db.connect()
@@ -193,15 +201,12 @@ class ScrapeProcess(Process):
 	def run(self):
 		self.scrape_data()
 		data = VineData(self._job, self._db)
-		try:
-			for vine in self._scrape.vinedata:
-				data.insert_user(args_for_insert_user(vine))
-				data.insert_vine(args_for_insert_vine(vine))
-				data.link_to_job(vine['permalinkUrl'])
+		for vine in self._scrape.vinedata:
+			data.insert_user(args_for_insert_user(vine))
+			data.insert_vine(args_for_insert_vine(vine))
+			data.link_to_job(vine['permalinkUrl'])
 
-		finally:
-			self._db.commit()
-			self._db.close()
+		logger.info("Finished scrape process")
 
 	def scrape_data(self, size=20):
 		url = self._job.url
@@ -219,15 +224,15 @@ def args_for_insert_user(vine):
 def args_for_insert_vine(vine):
 
 	# Filter emoji and hashtags
-	title = fix(video['description'])
+	title = fix(vine['description'])
 
 	# Convert the time in a compatible time for the database
-	created = dt.strptime(video['created'], "%Y-%m-%dT%H:%M:%S.%f")
+	created = dt.strptime(vine['created'], "%Y-%m-%dT%H:%M:%S.%f")
 	
-	return (video['permalinkUrl'], video['videoUrl'], title, 
-		video['userId'], video['loops'], video['likes'], video['comments'], 
-		video['reposts'], created.strftime('%Y-%m-%d %H:%M:%S'), 
-		video['loops'], video['likes'], video['comments'], video['reposts'],)
+	return (vine['permalinkUrl'], vine['videoUrl'], title, 
+		vine['userId'], vine['loops'], vine['likes'], vine['comments'], 
+		vine['reposts'], created.strftime('%Y-%m-%d %H:%M:%S'), 
+		vine['loops'], vine['likes'], vine['comments'], vine['reposts'],)
 
 # Ugly crap
 def fix(title):

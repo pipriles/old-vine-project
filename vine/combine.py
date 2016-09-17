@@ -144,8 +144,4 @@ def change_group(name):
 
 # Not completed
 if __name__ == '__main__':
-
-	db = Database().connect_db()
-
-	job = [3, 'test', 5, 3, 4, 1]
-	combine_top_videos(job)
+	main()

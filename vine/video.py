@@ -16,6 +16,11 @@ fields += "font "
 fields += "image"
 Settings = namedtuple("Settings", fields)
 
+DEFAULT_SETTINGS = ("0", "1280:720", "720:720",
+	"(main_w/2-text_w/2)", "(main_h)-50",
+	"Text here please", "32", "black@1", "white@0.7", 
+	"FreeSerif.ttf", "Vine_Numbers.jpg")
+
 class VideoData:
 
 	def __init__(self, job, db):
@@ -25,9 +30,13 @@ class VideoData:
 
 	def get_settings(self):
 		sql = "SELECT * FROM settings WHERE id = %s;"
-		conf = self.db.query(sql % job.settingsID)
-
-		self.job_settings = Settings(*conf.fetchone())
+		dbc = self.db.query(sql % job.settingsID)
+		conf = dbc.fetchone()
+		if conf is None: 
+			self.job_settings = Settings(*DEFAULT_SETTINGS)
+		else:
+			self.job_settings = Settings(*conf)
+		
 		return self.job_settings
 
 	def set_as_used(self, vine):

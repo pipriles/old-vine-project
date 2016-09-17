@@ -24,6 +24,12 @@ class JobData:
 	def __iter__(self):
 		return iter(self.jobs)
 
+	def __repr__(self):
+		rep = []
+		for x in self.jobs:
+			rep.append("%s" % x)
+		return "\n".join(rep)
+
 	def clear_status(self, db):
 		db.query("UPDATE job SET job.status = '000'")
 
@@ -72,44 +78,46 @@ class VineJob:
 		self.__scraping = 0
 		self.__combining = 0
 
+	def __repr__(self):
+		args = (self._id, self.url, 
+			self.next_scrape - dt.datetime.now(),
+			self.next_combine - dt.datetime.now())
+
+		return "[%s, %s, %s, %s]" % args
+
 	def refresh_job(self, db):
-		
 		sql = "SELECT * FROM job WHERE job.id = %s"
 		dbc = db.query(sql % self._id)
 		new = dbc.fetchone()
 		self.__init__(*new)
 
 	def scrape_time(self):
-		
 		present = dt.datetime.now()
 		return True if self.next_scrape <= present else False
 
 	def combine_time(self):
-		
 		present = dt.datetime.now()
 		return True if self.next_combine <= present else False
 	
 	def change_status(self, new_status, db):
-		
 		self.status = new_status
 		sql  = "UPDATE job SET job.status = '%s' WHERE job.id = '%s'"
-		db.query(sql % (new_status, self.id))
+		db.query(sql % (new_status, self._id))
+
 
 	def update_scrape_time(self, db):
-		
 		interval = dt.timedelta(minutes=self.scrape_interval)
 		self.next_scrape = dt.datetime.now() + interval
 
 		sql = "UPDATE job SET job.next_scrape = '%s' WHERE job.id = '%s'"
-		db.query(sql % (to_string(self.next_scrape), self.id)) 
+		db.query(sql % (to_string(self.next_scrape), self._id)) 
 
 	def update_combine_time(self, db):
-
 		interval = dt.timedelta(minutes=self.combine_interval)
 		self.next_combine = dt.datetime.now() + interval
 
 		sql = "UPDATE job SET job.next_combine = '%s' WHERE job.id = '%s'"
-		db.query(sql % (to_string(self.next_combine), self.id)) 
+		db.query(sql % (to_string(self.next_combine), self._id)) 
 
 	def start_scrape(self, db):
 		
@@ -117,6 +125,7 @@ class VineJob:
 		self.change_status(new_status, db)
 		self.update_scrape_time(db)
 		self.free_scrape()
+
 
 	def start_combine(self, db):
 		
@@ -126,6 +135,7 @@ class VineJob:
 		self.free_combine()
 	
 	def start_upload(self, db):
+
 		new_status = self.status[0] + self.status[1] + '1'
 		self.change_status(new_status, db)
 

@@ -13,31 +13,37 @@ from time import sleep, time
 
 import vine
 
+SLEEP_TIME = 1
+logger = logging.getLogger(__name__)
+
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(logging.Formatter())
+logger.addHandler(stream_handler)
+
+db = vine.Database()
 sp = vine.SocketProcess()
 jobs = vine.JobData()
 
 running = []	# Running processes
 
 def initialize():
-	try:
 		# Listen to socket
 		sp.start()
-		logging.info('Listening to socket...')
 
-		logging.info("Connecting to database...")
-		db = vine.Database()
-		db.connect()
-		jobs.init_jobs(db)
-		db.close()
-		logging.info("Connected to database!")
-	except Exception, e:
-		raise e
+		# Connect to database
+		if db.open():
+			jobs.init_jobs(db)
+		else:
+			db.connect()
+			jobs.init_jobs(db)
+			db.close()
 
 def end_with_this():
 	sp.stop()
 	sp.join()
 	for p in running: 
 		p.join()
+	db.close()
 
 def run_scrape(job):
 
@@ -79,25 +85,47 @@ def clean_zombies():
 def wait(old_time):
 	interval = time() - old_time
 	if interval <= 1:
-		logging.debug("Waiting %s seconds", 1-interval)
-		sleep(1 - interval)
+		interval = SLEEP_TIME - interval
+		logger.info("Waiting %s seconds", interval)
+		sleep(interval)
 
-Status = True
+def update_jobs():
+	if db.open():
+		jobs.refresh_jobs(db)
+	else:
+		if sp.need_refresh_jobs():
+			db.connect()
+			jobs.refresh_jobs(db)
+			db.close()
+			sp.refresh_jobs_off()
+
+STATUS = True
+
+def debug():
+	logger.info('')
+	logger.info("Jobs:")
+	logger.info(jobs)
+	logger.info('')
+	logger.info("Running:")
+	logger.info(running)
+	logger.info('')
 
 def main():
 	try:
 		initialize()
 		while True:
 			old_time = time()
-			if Status: process_jobs()
+			
+			debug()
+			# Main logic of the script
+			if STATUS: 
+				process_jobs()
 			clean_zombies()
+			update_jobs()
+				
 			wait(old_time)
-			logging.debug("SOCKET PROCESS: %s", sp.is_alive())
 	except KeyboardInterrupt:
-		logging.debug("\nGood bye")
-	except:
-		logging.critical("Maybe mysql server is not running...")
-
+		logger.critical("\nGood bye")
 	finally:
 		end_with_this()
 
@@ -105,9 +133,15 @@ if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser(description="Here is where the magic happens")
 	parser.add_argument("--log-level", default="WARNING", help="Filter log messages")
+	parser.add_argument("--real-time", default=False, type=bool, help="Update jobs every second, (Just for debug)")
 
 	args = parser.parse_args()
 	attr = getattr(logging, args.log_level, 30)
-	logging.basicConfig(level=attr, format="%(message)s")
+	logging.getLogger().setLevel(attr)
+
+	if args.real_time:
+		# In real time the database is always connected
+		logger.debug("REAL TIME MODE ON")
+		db.connect()
 
 	main()
