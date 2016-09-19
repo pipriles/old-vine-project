@@ -41,15 +41,16 @@ class CombineProcess(Process):
 
 	def combine_all(self, cast):
 
-		survivors = cast.convert_video_list(vids)
+		survivors = cast.convert_video_list()
 		
 		if survivors:
-			final = cast.combine_videos(survivors)
+			name = '_'.join(map(str, (self.job._id, datetime.now().split())))
+			combine_videos(survivors, name)
 			change_group(final)
 		else:
 			logger.warning("Could not convert all the videos")
 
-		cast.clean_videos(vids)
+		cast.clean_videos()
 
 class VideosSpell:
 
@@ -57,25 +58,23 @@ class VideosSpell:
 		self.data = vd
 		self.vids = []
 
-	def prepare_videos():
+	def prepare_videos(self):
 
 		result = self.data.get_top_videos()
-
-		p = Pool()
-		self.vids = p.map(self._make_it_pretty, result)
-		p.close()
-		p.join()
-
+		self.vids = map(self._make_it_pretty, result)
+		
 		# I should check if the videos
 		# already exists
 
 		self.vids = dl.download_videos(self.vids)
-		logger.debug(videos)
+		logger.debug(self.vids)
 
-	def _make_it_pretty(vid):
+	def _make_it_pretty(self, vid):
 		
 		# I should make a column description length
 		# in the settings table
+
+		logger.debug(vid)
 
 		url = vid[0]
 		_id = vid[1]
@@ -90,29 +89,14 @@ class VideosSpell:
 		converted = []
 		for vid in self.vids:
 			# Should i Pool?
-			ret = convert_video(vid.title, conf)
+			ret = convert_video(vid.title, vid.description, conf)
 			if ret != "":
 				self.data.set_as_used(vid.id)
 				converted.append(ret)
 
 		return converted
 
-	def combine_videos(self, vids):
-
-		videos = "|".join(vids)
-		final_name = '_'.join(map(str, (self.data.job._id, datetime.now().split())))
-
-	 	command = [
-	 		config.ffmpeg_bin, '-y', '-i', 
-	 		'concat:%s' % videos, 
-	 		'-c', 'copy',
-	 		config.video_path + '%s.mp4' % final_name
-	 	]
-		call(command)
-
-		return final_name
-
-	def clean_videos(self, vids):
+	def clean_videos(self):
 
 		# Delete videos used
 		for vid in self.vids:
@@ -120,9 +104,30 @@ class VideosSpell:
 			command = ['rm', '-rf', temp + ".mp4", temp + ".mpg"]
 			call(command)
 
-def convert_video(title, conf):
+def combine_videos(vids, name):
+
+	videos = "|".join(vids)
+	
+ 	command = [
+ 		config.ffmpeg_bin, '-y', '-i', 
+ 		'concat:%s' % videos, 
+ 		'-c', 'copy',
+ 		config.video_path + '%s.mp4' % final_name
+ 	]
+	call(command)
+
+def convert_video(title, sub, conf):
 
 	result = ""
+
+	cfilter  = '"[0:v]scale=%s[scaled];' % conf.scale_1
+	cfilter += "[1:v]scale=%s[scaled2];" % conf.scale_2
+	cfilter += "[scaled][scaled2]overlay=(main_w-overlay_w)/2:0:shortest=1[res];"
+	cfilter += "[res]drawtext=fontfile=%s" % config.font_path + conf.font
+	cfilter += ":text='%s':x=%s: y=%s: " % (sub, conf.text_x, conf.text_y)
+	cfilter += "fontsize=%s:fontcolor=%s" % (conf.font_size, conf.font_color)
+	cfilter += ':box=1:boxcolor=%s[out]"' % conf.font_background_color
+
 
 	# Horrible magic ffmpeg command
 	command = [
@@ -130,23 +135,19 @@ def convert_video(title, conf):
 		'-loop', '1', 
 		'-i', config.image_path + '%s' % conf.image, 
 		'-i', config.video_path + "%s.mp4" % title, 
-		
 		'-filter_complex', 	
-		"[0:v]scale=%s[scaled];" % conf.scale_1,
-		"[1:v]scale=%s[scaled2];" % conf.scale_2,
-		"[scaled][scaled2]overlay=(main_w-overlay_w)/2:0:shortest=1[res];",
-		"[res]drawtext=fontfile=%s" % config.font_path + conf.font,
-		":text='%s':x=%s: y=%s: " % (title, conf.text_x, conf.text_y),
-		"fontsize=%s:fontcolor=%s" % (conf.font_size, conf.font_color),
-		":box=1:boxcolor=%s[out]" % conf.font_background_color,
-
-		'-map', '[out]', 
+		cfilter,
+		'-map', '"[out]"', 
 		'-map', '1:a',
 		'-y', '-qscale:v', '1',
 		config.video_path + '%s.mpg' % title
 	]
 
-	if call(command) == 0:
+	logger.debug(command)
+	logger.debug('')
+	logger.debug(' '.join(command))
+
+	if call(' '.join(command)) == 0:
 		result = config.video_path + "%s.mpg" % title
 
 	return result

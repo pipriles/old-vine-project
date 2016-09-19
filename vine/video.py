@@ -1,5 +1,7 @@
 #!/usr/bin/env python2
 
+from collections import namedtuple
+
 import config
 
 # Vine video struct
@@ -18,7 +20,7 @@ class VideoData:
 		self.job_settings = None
 
 	def get_settings(self):
-		conf = self.job.get_settings()
+		conf = self.job.get_settings(self.db)
 		self.job_settings = conf
 		return self.job_settings
 
