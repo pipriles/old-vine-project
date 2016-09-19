@@ -2,6 +2,10 @@
 
 from collections import namedtuple
 
+# Web groub for permissions
+
+WEB_GROUP = "http"
+
 # Sleep interval time
 
 sleep_time = 1

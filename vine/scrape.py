@@ -63,7 +63,6 @@ class Scraper:
 
 	# Get vines from a user playlist
 	def get_playlist(self, user):
-		print user
 		url = "https://vine.co/api/timelines/lists/vanity/" + user +"/posts?size=" + str(self.limit)
 		vines = rq.get(url).json()
 		self.get_Vines(vines)

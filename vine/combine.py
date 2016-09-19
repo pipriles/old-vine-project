@@ -1,6 +1,8 @@
 #!/usr/bin/env python2
 
 import logging
+import datetime as dt
+
 from subprocess import call
 from functools import partial
 from datetime import datetime
@@ -11,6 +13,8 @@ import download as dl
 from database import Database
 from video import VideoData, VineVideo
 
+DT_FORMAT = "%Y-%m-%d_%H:%M:%S"
+
 logger = logging.getLogger(__name__)
 
 class CombineProcess(Process):
@@ -18,15 +22,15 @@ class CombineProcess(Process):
 	def __init__(self, job):
 		name = "Combine Process %s" % job._id
 		super(CombineProcess, self).__init__(name=name)
-		self._job = job
-		self._db = Database()
-		self._db.connect()
-		self._data = VideoData(self._job, self._db)
+		self.job = job
+		self.db = Database()
+		self.db.connect()
+		self.data = VideoData(self.job, self.db)
 		
-		self._job.start_combine(self._db)
+		self.job.start_combine(self.db)
 
 	def run(self):
-		cast = VideosSpell(self._data)
+		cast = VideosSpell(self.data)
 		cast.prepare_videos()
 		try:
 			# Combine all the videos
@@ -35,18 +39,18 @@ class CombineProcess(Process):
 			# Here we are gonna upload
 			#
 		finally:
-			self._job.finish_combine(self._db)
+			self.job.finish_combine(self.db)
 			logger.info("Finished combine process")
-
 
 	def combine_all(self, cast):
 
 		survivors = cast.convert_video_list()
 		
 		if survivors:
-			name = '_'.join(map(str, (self.job._id, datetime.now().split())))
+			now = dt.datetime.now().strftime(DT_FORMAT)
+			name = str(self.job._id) + "_" + now
 			combine_videos(survivors, name)
-			change_group(final)
+			change_group(name)
 		else:
 			logger.warning("Could not convert all the videos")
 
@@ -112,7 +116,7 @@ def combine_videos(vids, name):
  		config.ffmpeg_bin, '-y', '-i', 
  		'concat:%s' % videos, 
  		'-c', 'copy',
- 		config.video_path + '%s.mp4' % final_name
+ 		config.video_path + '%s.mp4' % name
  	]
 	call(command)
 
@@ -120,40 +124,35 @@ def convert_video(title, sub, conf):
 
 	result = ""
 
-	cfilter  = '"[0:v]scale=%s[scaled];' % conf.scale_1
+	cfilter  = "[0:v]scale=%s[scaled];" % conf.scale_1
 	cfilter += "[1:v]scale=%s[scaled2];" % conf.scale_2
-	cfilter += "[scaled][scaled2]overlay=(main_w-overlay_w)/2:0:shortest=1[res];"
-	cfilter += "[res]drawtext=fontfile=%s" % config.font_path + conf.font
-	cfilter += ":text='%s':x=%s: y=%s: " % (sub, conf.text_x, conf.text_y)
-	cfilter += "fontsize=%s:fontcolor=%s" % (conf.font_size, conf.font_color)
-	cfilter += ':box=1:boxcolor=%s[out]"' % conf.font_background_color
-
+	cfilter += " [scaled][scaled2]overlay=(main_w-overlay_w)/2:0:shortest=1[res];"
+	cfilter += " [res]drawtext=fontfile=%s" % config.font_path + conf.font
+	cfilter += ":text='%s':x=%s: y=%s:" % (sub, conf.text_x, conf.text_y)
+	cfilter += " fontsize=%s:fontcolor=%s" % (conf.font_size, conf.font_color)
+	cfilter += ":box=1:boxcolor=%s[out]" % conf.font_background_color
 
 	# Horrible magic ffmpeg command
 	command = [
 		config.ffmpeg_bin, 
 		'-loop', '1', 
 		'-i', config.image_path + '%s' % conf.image, 
-		'-i', config.video_path + "%s.mp4" % title, 
-		'-filter_complex', 	
+		'-i', config.video_path + "%s.mp4" % (title), 
+		'-filter_complex', 
 		cfilter,
-		'-map', '"[out]"', 
+		'-map', '[out]', 
 		'-map', '1:a',
 		'-y', '-qscale:v', '1',
 		config.video_path + '%s.mpg' % title
 	]
 
-	logger.debug(command)
-	logger.debug('')
-	logger.debug(' '.join(command))
-
-	if call(' '.join(command)) == 0:
+	if call(command) == 0:
 		result = config.video_path + "%s.mpg" % title
 
 	return result
 
 def change_group(name):
-	command = ['chgrp', 'www-data', config.video_path + '%s.mp4' % name]
+	command = ['chgrp', config.WEB_GROUP, config.video_path + '%s.mp4' % name]
 	call(command)
 
 # Not completed
