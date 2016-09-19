@@ -1,38 +1,34 @@
 #!/usr/bin/env python2
 
-from database import Database
+import logging
 import urllib
 import os
 from multiprocessing import Pool
 from functools import partial
 
-video_path = "/var/www/html/res/videos/"
+import config
+from database import Database
 
 # Downloads a videos for each CPU
 
-def download_videos(job, videos):
+logger = logging.getLogger(__name__)
 
-	if not os.path.exists(video_path):
-		os.makedirs(video_path)
+def download_videos(videos):
 
-	pool = Pool()
-	download = partial(partial(retrieve_vid, urllib.URLopener()), job) 
-	vids = [x for x in pool.map(download, videos) if x is not None]
+	if not os.path.exists(config.video_path):
+		os.makedirs(config.video_path)
 
-	pool.close()
-	pool.join()
+	vids = []
+	site = urllib.URLopener()
+	for x in videos:
+		retrieve_vid(site, x.url, "%s.mp4" % x.title)
+		vids.append(x)
 
 	return vids
 
-def retrieve_vid(site, job, vid):
-	print "Downloading %s.mp4" % vid[1]
-	try:
-		site.retrieve(vid[0], video_path + "%s_%s.mp4" % (vid[1], job[0]))
-		
-		# Max 80 characters description
-		return (vid[1], vid[2])
-	except:
-		return None
+def retrieve_vid(site, url, title):
+	logger.info("Downloading %s", title)
+	site.retrieve(url, config.video_path + title)
 
 # Test
 if __name__ == '__main__':

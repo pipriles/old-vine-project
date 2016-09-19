@@ -201,12 +201,14 @@ class ScrapeProcess(Process):
 	def run(self):
 		self.scrape_data()
 		data = VineData(self._job, self._db)
-		for vine in self._scrape.vinedata:
-			data.insert_user(args_for_insert_user(vine))
-			data.insert_vine(args_for_insert_vine(vine))
-			data.link_to_job(vine['permalinkUrl'])
-
-		logger.info("Finished scrape process")
+		try:
+			for vine in self._scrape.vinedata:
+				data.insert_user(args_for_insert_user(vine))
+				data.insert_vine(args_for_insert_vine(vine))
+				data.link_to_job(vine['permalinkUrl'])
+		finally:
+			self._job.finish_scrape(self._db)
+			logger.info("Finished scrape process")
 
 	def scrape_data(self, size=20):
 		url = self._job.url

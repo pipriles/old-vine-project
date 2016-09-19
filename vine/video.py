@@ -1,25 +1,14 @@
 #!/usr/bin/env python2
 
-from collections import namedtuple
+import config
 
-# Settings struct
-fields  = "id "
-fields += "scale_1 "
-fields += "scale_2 "
-fields += "text_x "
-fields += "text_y "
-fields += "text_size "
-fields += "font_size "
-fields += "font_color "
-fields += "font_background_color "
-fields += "font "
-fields += "image"
-Settings = namedtuple("Settings", fields)
+# Vine video struct
 
-DEFAULT_SETTINGS = ("0", "1280:720", "720:720",
-	"(main_w/2-text_w/2)", "(main_h)-50",
-	"Text here please", "32", "black@1", "white@0.7", 
-	"FreeSerif.ttf", "Vine_Numbers.jpg")
+fields  = "url "
+fields += "id "
+fields += "description "
+fields += "title"
+VineVideo = namedtuple("VineVideo", fields)
 
 class VideoData:
 
@@ -29,14 +18,8 @@ class VideoData:
 		self.job_settings = None
 
 	def get_settings(self):
-		sql = "SELECT * FROM settings WHERE id = %s;"
-		dbc = self.db.query(sql % job.settingsID)
-		conf = dbc.fetchone()
-		if conf is None: 
-			self.job_settings = Settings(*DEFAULT_SETTINGS)
-		else:
-			self.job_settings = Settings(*conf)
-		
+		conf = self.job.get_settings()
+		self.job_settings = conf
 		return self.job_settings
 
 	def set_as_used(self, vine):

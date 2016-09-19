@@ -1,6 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 import logging
+import config
 
 from database import Database
 from jobs import JobData

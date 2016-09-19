@@ -1,31 +1,17 @@
 #!/usr/bin/env python2
 
+import logging
 from subprocess import call
 from functools import partial
 from datetime import datetime
 from multiprocessing import Process, Pool
 
+import config
 import download as dl
 from database import Database
-from video import VideoData
+from video import VideoData, VineVideo
 
-# Make a config file in the __init__.py 
-
-ffmpeg_bin = "ffmpeg"	# Linux
-video_path = "/var/www/html/res/videos/"
-image_path = "/var/www/html/res/images/"
-font_path  = "/var/www/html/res/fonts/"
-
-def prepare_videos(vid_data):
-	result = vid_data.get_top_videos()
-	videos = dl.download_videos(vid_data.job, result)
-
-	p = Pool()
-	vids = [x for x in p.map(cut_description, videos)]
-	p.close()
-	p.join()
-
-	return vids
+logger = logging.getLogger(__name__)
 
 class CombineProcess(Process):
 
@@ -39,73 +25,100 @@ class CombineProcess(Process):
 		
 		self._job.start_combine(self._db)
 
-	def close(self):
-		self._db.commit()
-		self._db.close()
-
 	def run(self):
-		self._data.get_settings()
-		vids = prepare_videos(self._data)
-		
-		# Combine all the videos
-		self.combine_all(vids)
+		cast = VideosSpell(self._data)
+		cast.prepare_videos()
+		try:
+			# Combine all the videos
+			self.combine_all(cast)
 
-		# Here we are gonna upload
-		#
+			# Here we are gonna upload
+			#
+		finally:
+			self._job.finish_combine(self._db)
+			logger.info("Finished combine process")
 
-		self.close()
 
-	def combine_all(vids):
-		cast = VideosSpell(self._job)
-		
+	def combine_all(self, cast):
+
 		survivors = cast.convert_video_list(vids)
+		
 		if survivors:
 			final = cast.combine_videos(survivors)
 			change_group(final)
 		else:
-			print "Nothing to do here"
+			logger.warning("Could not convert all the videos")
 
 		cast.clean_videos(vids)
 
 class VideosSpell:
 
-	def __init__(self, job):
-		self.job = job
+	def __init__(self, vd):
+		self.data = vd
+		self.vids = []
 
-	def convert_video_list(self, vids):
+	def prepare_videos():
+
+		result = self.data.get_top_videos()
+
+		p = Pool()
+		self.vids = p.map(self._make_it_pretty, result)
+		p.close()
+		p.join()
+
+		# I should check if the videos
+		# already exists
+
+		self.vids = dl.download_videos(self.vids)
+		logger.debug(videos)
+
+	def _make_it_pretty(vid):
+		
+		# I should make a column description length
+		# in the settings table
+
+		url = vid[0]
+		_id = vid[1]
+		description = vid[2][:100] + '...' if len(vid[2]) > 100 else vid[2]
+		title = "%s_%s" % (_id, self.data.job._id)
+
+		return VineVideo(url, _id, description, title)
+
+	def convert_video_list(self):
+
+		conf = self.data.get_settings()
 		converted = []
-		for v in vids:
-			title = "%s_%s" % (vid[0], self.job._id)
-			ret = convert_video(title)	# Should i Pool?
+		for vid in self.vids:
+			# Should i Pool?
+			ret = convert_video(vid.title, conf)
 			if ret != "":
-				data.set_as_used(vid[0])
+				self.data.set_as_used(vid.id)
 				converted.append(ret)
 
 		return converted
 
 	def combine_videos(self, vids):
+
 		videos = "|".join(vids)
-		final_name = '_'.join([str(self.job._id)] + str(datetime.now()).split())
+		final_name = '_'.join(map(str, (self.data.job._id, datetime.now().split())))
 
 	 	command = [
-	 		ffmpeg_bin, '-y', '-i', 
+	 		config.ffmpeg_bin, '-y', '-i', 
 	 		'concat:%s' % videos, 
 	 		'-c', 'copy',
-	 		video_path + '%s.mp4' % final_name
+	 		config.video_path + '%s.mp4' % final_name
 	 	]
 		call(command)
+
 		return final_name
 
 	def clean_videos(self, vids):
+
 		# Delete videos used
-		for vid in vids:
-			temp = video_path + "%s_%s" % (vid[0], self.job._id)
+		for vid in self.vids:
+			temp = config.video_path + vid.title
 			command = ['rm', '-rf', temp + ".mp4", temp + ".mpg"]
 			call(command)
-
-# Helper
-def cut_description(vid):
-	(vid[0], vid[1][:100] + '...' if len(vid[1]) > 100 else vid[1])
 
 def convert_video(title, conf):
 
@@ -113,16 +126,16 @@ def convert_video(title, conf):
 
 	# Horrible magic ffmpeg command
 	command = [
-		ffmpeg_bin, 
+		config.ffmpeg_bin, 
 		'-loop', '1', 
-		'-i', image_path + '%s' % conf.image, 
-		'-i', video_path + "%s_%s.mp4" % title, 
+		'-i', config.image_path + '%s' % conf.image, 
+		'-i', config.video_path + "%s.mp4" % title, 
 		
 		'-filter_complex', 	
 		"[0:v]scale=%s[scaled];" % conf.scale_1,
 		"[1:v]scale=%s[scaled2];" % conf.scale_2,
 		"[scaled][scaled2]overlay=(main_w-overlay_w)/2:0:shortest=1[res];",
-		"[res]drawtext=fontfile=%s" % font_path + conf.font,
+		"[res]drawtext=fontfile=%s" % config.font_path + conf.font,
 		":text='%s':x=%s: y=%s: " % (title, conf.text_x, conf.text_y),
 		"fontsize=%s:fontcolor=%s" % (conf.font_size, conf.font_color),
 		":box=1:boxcolor=%s[out]" % conf.font_background_color,
@@ -130,16 +143,16 @@ def convert_video(title, conf):
 		'-map', '[out]', 
 		'-map', '1:a',
 		'-y', '-qscale:v', '1',
-		video_path + '%s_%s.mpg' % title
+		config.video_path + '%s.mpg' % title
 	]
 
 	if call(command) == 0:
-		result = video_path + "%s_%s.mpg" % title
+		result = config.video_path + "%s.mpg" % title
 
 	return result
 
 def change_group(name):
-	command = ['chgrp', 'www-data', video_path + '%s.mp4' % name]
+	command = ['chgrp', 'www-data', config.video_path + '%s.mp4' % name]
 	call(command)
 
 # Not completed

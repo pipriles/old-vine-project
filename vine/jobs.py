@@ -1,9 +1,10 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
 
 # This module provides an interface
 # to interact with job related data
 
 import datetime as dt
+import config
 
 DT_FORMAT = "%Y-%m-%d %H:%M:%S"
 
@@ -13,10 +14,10 @@ def to_datetime(t, format=DT_FORMAT):
 def to_string(t, format=DT_FORMAT):
 	return t.strftime(format)
 
-MAX_SCRAPE = 1
-MAX_COMBINE = 1
+config.MAX_SCRAPE = 1
+config.MAX_COMBINE = 1
 
-class JobData:
+class VineJobs:
 	
 	def __init__(self):
 		self.jobs = []
@@ -36,13 +37,13 @@ class JobData:
 	def init_jobs(self, db):
 		self.clear_status(db)
 		jobs = db.query('SELECT * FROM job')
-		self.jobs = [VineJob(*job) for job in jobs]
+		self.jobs = [JobData(*job) for job in jobs]
 
 	def refresh_jobs(self, db):
 		for job in self.jobs:
 			job.refresh_job(db)
 
-class VineJob:
+class JobData:
 
 	def __init__(self, _id, settings_id, name, url, 
 		scrape_limit, scrape_interval, next_scrape, 
@@ -91,6 +92,9 @@ class VineJob:
 		new = dbc.fetchone()
 		self.__init__(*new)
 
+	def get_settings(self, db):
+		return config.get_settings(self.settings_id, db)
+
 	def scrape_time(self):
 		present = dt.datetime.now()
 		return True if self.next_scrape <= present else False
@@ -99,11 +103,10 @@ class VineJob:
 		present = dt.datetime.now()
 		return True if self.next_combine <= present else False
 	
-	def change_status(self, new_status, db):
+	def _change_status(self, new_status, db):
 		self.status = new_status
 		sql  = "UPDATE job SET job.status = '%s' WHERE job.id = '%s'"
 		db.query(sql % (new_status, self._id))
-
 
 	def update_scrape_time(self, db):
 		interval = dt.timedelta(minutes=self.scrape_interval)
@@ -120,36 +123,32 @@ class VineJob:
 		db.query(sql % (to_string(self.next_combine), self._id)) 
 
 	def start_scrape(self, db):
-		
 		new_status = '1' + self.status[1] + self.status[2]
-		self.change_status(new_status, db)
+		self._change_status(new_status, db)
 		self.update_scrape_time(db)
 		self.free_scrape()
 
-
 	def start_combine(self, db):
-		
 		new_status = self.status[0] + '1' + self.status[2]
-		self.change_status(new_status, db)
+		self._change_status(new_status, db)
 		self.update_combine_time(db)
 		self.free_combine()
 	
 	def start_upload(self, db):
-
 		new_status = self.status[0] + self.status[1] + '1'
-		self.change_status(new_status, db)
+		self._change_status(new_status, db)
 
 	def finish_scrape(self, db):
 		new_status = '0' + self.status[1] + self.status[2]
-		self.change_status(new_status, db)
+		self._change_status(new_status, db)
 
 	def finish_combine(self, db):
 		new_status = self.status[0] + '0' + self.status[2]
-		self.change_status(new_status, db)
+		self._change_status(new_status, db)
 
 	def finish_upload(self, db):
 		new_status = self.status[0] + self.status[1] + '0'
-		self.change_status(new_status, db)
+		self._change_status(new_status, db)
 
 	def can_scrape(self):
 		return self.status[0] == '0'
@@ -164,11 +163,11 @@ class VineJob:
 		return True if self.__combining > 0 else False
 
 	def hold_scrape(self):
-		if self.__scraping < MAX_SCRAPE:
+		if self.__scraping < config.MAX_SCRAPE:
 			self.__scraping += 1
 
 	def hold_combine(self):
-		if self.__combining < MAX_COMBINE:
+		if self.__combining < config.MAX_COMBINE:
 			self.__combining += 1
 
 	def free_scrape(self):

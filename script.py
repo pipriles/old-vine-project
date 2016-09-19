@@ -13,7 +13,6 @@ from time import sleep, time
 
 import vine
 
-SLEEP_TIME = 1
 logger = logging.getLogger(__name__)
 
 stream_handler = logging.StreamHandler()
@@ -22,21 +21,21 @@ logger.addHandler(stream_handler)
 
 db = vine.Database()
 sp = vine.SocketProcess()
-jobs = vine.JobData()
+jobs = vine.VineJobs()
 
 running = []	# Running processes
 
 def initialize():
-		# Listen to socket
-		sp.start()
+	# Listen to socket
+	sp.start()
 
-		# Connect to database
-		if db.open():
-			jobs.init_jobs(db)
-		else:
-			db.connect()
-			jobs.init_jobs(db)
-			db.close()
+	# Connect to database
+	if db.open():
+		jobs.init_jobs(db)
+	else:
+		db.connect()
+		jobs.init_jobs(db)
+		db.close()
 
 def end_with_this():
 	sp.stop()
@@ -83,9 +82,10 @@ def clean_zombies():
 			running.append(p)
 
 def wait(old_time):
+	st = vine.config.sleep_time
 	interval = time() - old_time
-	if interval <= 1:
-		interval = SLEEP_TIME - interval
+	if interval <= st:
+		interval = st - interval
 		logger.info("Waiting %s seconds", interval)
 		sleep(interval)
 
@@ -129,19 +129,37 @@ def main():
 	finally:
 		end_with_this()
 
+def set_from_args(args):
+	vine.config.sleep_time = args.sleep_time
+	vine.config.ffmpeg_bin = args.ffmpeg_bin
+	vine.config.video_path = args.video_path
+	vine.config.image_path = args.image_path
+	vine.config.font_path = args.font_path
+
 if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser(description="Here is where the magic happens")
-	parser.add_argument("--log-level", default="WARNING", help="Filter log messages")
-	parser.add_argument("--real-time", default=False, type=bool, help="Update jobs every second, (Just for debug)")
+	parser.add_argument("--sleep-time", default=1, type=int, help="Sleep time interval", metavar='')
+	parser.add_argument("--log-level", default="WARNING", help="Filter log messages", metavar='')
+	parser.add_argument("--real-time", default=False, type=bool, help="Update jobs every second, (Just for debug)", metavar='')
+	parser.add_argument("--video-path", default="./res/videos/", help="Path of the video folder", metavar='')
+	parser.add_argument("--image-path", default="./res/images/", help="Path of the image folder", metavar='')
+	parser.add_argument("--font-path", default="./res/fonts/", help="Path of the fonts folder", metavar='')
+	parser.add_argument("--ffmpeg-bin", default="ffmpeg", help="ffmpeg command to be called", metavar='')
 
 	args = parser.parse_args()
 	attr = getattr(logging, args.log_level, 30)
 	logging.getLogger().setLevel(attr)
 
+	set_from_args(args)
+	logger.debug("Video path: %s", vine.config.video_path)
+	logger.debug("Image path: %s", vine.config.image_path)
+	logger.debug("Font path:  %s", vine.config.font_path)
+	logger.debug("Sleep time: %s", vine.config.sleep_time)
+
 	if args.real_time:
 		# In real time the database is always connected
-		logger.debug("REAL TIME MODE ON")
+		logger.debug("-> REAL TIME MODE ON")
 		db.connect()
 
 	main()
