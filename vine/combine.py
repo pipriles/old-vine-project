@@ -10,6 +10,7 @@ from multiprocessing import Process, Pool
 
 import config
 import download as dl
+import youtube as yt
 from database import Database
 from video import VideoData, VineVideo
 
@@ -23,87 +24,100 @@ class CombineProcess(Process):
 		name = "Combine Process %s" % job._id
 		super(CombineProcess, self).__init__(name=name)
 		self.job = job
+		
 		self.db = Database()
 		self.db.connect()
-		self.data = VideoData(self.job, self.db)
 		
+		self.data = VideoData(self.job, self.db)
 		self.job.start_combine(self.db)
 
 	def run(self):
 		cast = VideosSpell(self.data)
-		cast.prepare_videos()
 		try:
 			# Combine all the videos
-			self.combine_all(cast)
+			cast.download_videos()
+			cast.convert_videos()
+			cast.combine_videos()
 
-			# Here we are gonna upload
-			#
+			# If autoupload flag is set
+			cast.upload_video()
+			
 		finally:
+			cast.clean_videos()
 			self.job.finish_combine(self.db)
 			logger.info("Finished combine process")
 
-	def combine_all(self, cast):
-
-		survivors = cast.convert_video_list()
-		
-		if survivors:
-			now = dt.datetime.now().strftime(DT_FORMAT)
-			name = str(self.job._id) + "_" + now
-			combine_videos(survivors, name)
-			change_group(name)
-		else:
-			logger.warning("Could not convert all the videos")
-
-		cast.clean_videos()
+# Maybe this class should have inside
+# a VideoData initialization and not 
+# in the process
 
 class VideosSpell:
 
 	def __init__(self, vd):
 		self.data = vd
-		self.vids = []
+		self.downloaded = []
+		self.converted = []
 
-	def prepare_videos(self):
+	def download_videos(self):
 
-		result = self.data.get_top_videos()
-		self.vids = map(self._make_it_pretty, result)
-		
+		top = self.data.get_top_videos()
+
 		# I should check if the videos
 		# already exists
 
-		self.vids = dl.download_videos(self.vids)
-		logger.debug(self.vids)
+		self.downloaded = dl.download_videos(top)
+		logger.debug(self.downloaded)
 
-	def _make_it_pretty(self, vid):
-		
-		# I should make a column description length
-		# in the settings table
-
-		logger.debug(vid)
-
-		url = vid[0]
-		_id = vid[1]
-		description = vid[2][:100] + '...' if len(vid[2]) > 100 else vid[2]
-		title = "%s_%s" % (_id, self.data.job._id)
-
-		return VineVideo(url, _id, description, title)
-
-	def convert_video_list(self):
+	def convert_videos(self):
 
 		conf = self.data.get_settings()
-		converted = []
-		for vid in self.vids:
-			# Should i Pool?
+		
+		# Should i Pool?
+
+		for vid in self.downloaded:
 			ret = convert_video(vid.title, vid.description, conf)
 			if ret != "":
 				self.data.set_as_used(vid.id)
-				converted.append(ret)
+				self.converted.append(ret)
 
-		return converted
+	def combine_videos(self):
+
+		if self.converted:
+			now = dt.datetime.now().strftime(DT_FORMAT)
+			name = str(self.data.job._id) + "_" + now
+			combine_videos(self.converted, name)
+			change_group(name)
+		else:
+			logger.warning("Could not convert all the videos")
+
+	def upload_video(self):
+
+		if self.data.job.autoupload:
+			accounts = self.data.get_accounts()
+
+			# What should i put in the description?
+			# I have to do the keywords part
+			# Maybe a settings for the privacy
+
+			file = ""
+			description = None
+			category = 22
+			keywords = None
+			privacyStatus = yt.PRIVACY_STATUS[0]
+
+			for x in accounts:
+				user = x[0]
+				title = x[1]
+				args = yt.UploadVideo(user, file, title, 
+					description, category, keywords, privacyStatus)
+
+				# Upload the video
+				yt.upload_from_args(args, self.data.db)
 
 	def clean_videos(self):
 
 		# Delete videos used
-		for vid in self.vids:
+		for vid in self.downloaded:
 			temp = config.video_path + vid.title
 			command = ['rm', '-rf', temp + ".mp4", temp + ".mpg"]
 			call(command)

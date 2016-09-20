@@ -92,6 +92,13 @@ class JobData:
 		new = dbc.fetchone()
 		self.__init__(*new)
 
+	def get_accounts(self, db):
+		sql  = "SELECT accountID, title, language"
+		sql += " FROM job_account "
+		sql += "WHERE jobID = %s"
+		dbc = db.query(sql % self._id)
+		return dbc.fetchall()
+
 	def get_settings(self, db):
 		return config.get_settings(self.settings_id, db)
 
@@ -102,7 +109,7 @@ class JobData:
 	def combine_time(self):
 		present = dt.datetime.now()
 		return True if self.next_combine <= present else False
-	
+
 	def _change_status(self, new_status, db):
 		self.status = new_status
 		sql  = "UPDATE job SET job.status = '%s' WHERE job.id = '%s'"

@@ -3,6 +3,7 @@
 # This module provides an interface for
 # Yotube data and functions
 
+import logging
 import httplib 		# For exceptions
 import httplib2
 import datetime
@@ -12,8 +13,11 @@ from apiclient.errors import HttpError
 from apiclient.http import MediaFileUpload
 from oauth2client.client import OAuth2Credentials
 from oauth2client.client import EXPIRY_FORMAT
+from collections import namedtuple
 
 from database import Database
+
+logger = logging.getLogger(__name__)
 
 CLIENT_ID = "892925157774-u9l5kehvb7fgnqnb86rdoj0a3ek6ktd0.apps.googleusercontent.com"
 CLIENT_SECRET = "k52sVi1FQCr4rj-NOICvSDDZ"
@@ -24,6 +28,16 @@ YOUTUBE_API_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 
 PRIVACY_STATUS = ("public", "private", "unlisted")
+
+fields  = "user "
+fields += "file "
+fields += "title "
+fields += "description "
+fields += "category "
+fields += "keywords "
+fields += "privacyStatus"
+
+UploadVideo = namedtuple("UploadVideo", fields)
 
 class YouTubeData:
 
@@ -156,14 +170,21 @@ def upload_video(request):
 	while result is None:	
 
 		# I should handle exceptions
-		print "Uploading video..."
+		logger.info("Uploading video...")
 		status, result = request.next_chunk()
 		
 		if 'id' in result:
-			print "Watch video in: http://www.youtube.com/watch?v=%s" % result['id']
+			logger.info("Watch video in: http://www.youtube.com/watch?v=%s" % result['id'])
 		else:
-			exit("Bad response :(")
+			logger.warning("Bad response trying to upload the video :(")
 
+def upload_from_args(args, db):
+	data = YouTubeData(args.user, db)
+	youtube = get_authenticated_service(data)
+	try:
+		init_upload(youtube, args)
+	except HttpError, e:
+		logger.error("An HTTP error %d occurred:\n%s" % (e.resp.status, e.content))
 #
 # This is a test to upload 
 # a video to youtube 
