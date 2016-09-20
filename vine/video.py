@@ -15,7 +15,7 @@ VineVideo = namedtuple("VineVideo", fields)
 
 class VideoData:
 
-	def __init__(self, job=None, conf_id=None, db):
+	def __init__(self, db, job=None, conf_id=None):
 		self.db = db
 		self.job = job
 		self.conf_id = conf_id
@@ -33,7 +33,7 @@ class VideoData:
 		self.conf = conf
 		return conf
 
-	def get_upload_info(self):
+	def get_accounts(self):
 		if self.job:
 			return self.job.get_accounts(self.db)
 		else:
@@ -88,8 +88,6 @@ class VideoData:
 	
 		# I should make a column description length
 		# in the settings table
-
-		logger.debug(vid)
 
 		url = vid[0]
 		_id = vid[1]

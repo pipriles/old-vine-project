@@ -17,7 +17,7 @@ from collections import namedtuple
 
 from database import Database
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 CLIENT_ID = "892925157774-u9l5kehvb7fgnqnb86rdoj0a3ek6ktd0.apps.googleusercontent.com"
 CLIENT_SECRET = "k52sVi1FQCr4rj-NOICvSDDZ"

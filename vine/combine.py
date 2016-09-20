@@ -28,7 +28,7 @@ class CombineProcess(Process):
 		self.db = Database()
 		self.db.connect()
 		
-		self.data = VideoData(self.job, self.db)
+		self.data = VideoData(self.db, self.job)
 		self.job.start_combine(self.db)
 
 	def run(self):
@@ -41,7 +41,7 @@ class CombineProcess(Process):
 
 			# If autoupload flag is set
 			cast.upload_video()
-			
+
 		finally:
 			cast.clean_videos()
 			self.job.finish_combine(self.db)
@@ -87,19 +87,24 @@ class VideosSpell:
 			name = str(self.data.job._id) + "_" + now
 			combine_videos(self.converted, name)
 			change_group(name)
+			self.final = name
 		else:
 			logger.warning("Could not convert all the videos")
 
 	def upload_video(self):
 
-		if self.data.job.autoupload:
+		logger.debug(self.data.job.autoupload)
+
+		if self.data.job.autoupload and hasattr(self, 'final'):
+
 			accounts = self.data.get_accounts()
+			logger.debug(accounts)
 
 			# What should i put in the description?
 			# I have to do the keywords part
 			# Maybe a settings for the privacy
 
-			file = ""
+			file = config.video_path + '%s.mp4' % self.final
 			description = None
 			category = 22
 			keywords = None
