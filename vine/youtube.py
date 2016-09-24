@@ -7,6 +7,7 @@ import logging
 import httplib 		# For exceptions
 import httplib2
 import datetime
+import re
 
 from apiclient.discovery import build
 from apiclient.errors import HttpError
@@ -15,9 +16,10 @@ from oauth2client.client import OAuth2Credentials
 from oauth2client.client import EXPIRY_FORMAT
 from collections import namedtuple
 
+import config
 from database import Database
 
-logger = logging.getLogger(__name__).addHandler(logging.NullHandler())
+logger = logging.getLogger(__name__)
 
 CLIENT_ID = "892925157774-u9l5kehvb7fgnqnb86rdoj0a3ek6ktd0.apps.googleusercontent.com"
 CLIENT_SECRET = "k52sVi1FQCr4rj-NOICvSDDZ"
@@ -38,6 +40,37 @@ fields += "keywords "
 fields += "privacyStatus"
 
 UploadVideo = namedtuple("UploadVideo", fields)
+
+def gen_keywords(vids):
+	
+	tags = {}
+	regex = re.compile(r'[\w\d]{2,}')
+	stop_words = _get_stop_words()
+
+	for vid in vids:
+		data = regex.findall(vid.description)
+		data = [x.lower() for x in data]
+		for word in data:
+			if word not in stop_words:
+				_add_tag(tags, word)
+
+		_add_tag(tags, vid.user.lower())
+
+	return sorted(tags, key=lambda x: (tags[x], len(x)), reverse=True)
+
+def _add_tag(tags, word):
+	
+	if word in tags:
+		tags[word] += 1
+	else:
+		tags[word] = 1
+
+def _get_stop_words():
+
+	with open(config.WORDS_DIR + "english.txt") as f: 
+		stop_words = f.read().split()
+	
+	return stop_words
 
 class YouTubeData:
 
@@ -137,9 +170,10 @@ def init_upload(youtube, opt):
 
 	"""
 
-	tags = None
-	if opt.keywords:
+	if isinstance(opt.keywords, basestring):
 		tags = opt.keywords.split(",")
+	else:
+		tags = opt.keywords
 
 	body = {
 		'snippet': {
@@ -176,6 +210,7 @@ def upload_video(request):
 		if 'id' in result:
 			logger.info("Watch video in: http://www.youtube.com/watch?v=%s" % result['id'])
 		else:
+			logger.debug(result)
 			logger.warning("Bad response trying to upload the video :(")
 
 def upload_from_args(args, db):
@@ -204,6 +239,8 @@ if __name__ == '__main__':
 		help="Privacy status", metavar='')
 
 	args = parser.parse_args()
+	if args.keywords:
+		tags = opt.keywords.split(",")
 
 	db = Database()
 	db.connect()

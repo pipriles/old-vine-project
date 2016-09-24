@@ -10,7 +10,8 @@ import youtube as yt
 fields  = "url "
 fields += "id "
 fields += "description "
-fields += "title"
+fields += "title "
+fields += "user"
 VineVideo = namedtuple("VineVideo", fields)
 
 class VideoData:
@@ -60,7 +61,7 @@ class VideoData:
 	def get_top_videos(self):
 		# Look for videos not combined
 		sql = """
-			SELECT vine.url, vine.id, vine.title, 
+			SELECT vine.url, vine.id, vine.title, user.name, 
 				(vine.likes + vine.views + vine.reposts) /
 	    		CASE 
 	        		WHEN dif > 0.5 THEN 0.42 + dif * 0.01 ELSE dif 
@@ -71,7 +72,9 @@ class VideoData:
 	    		from vine
 	    	) as vine
 	        
-	    	INNER JOIN vine_job
+	        INNER JOIN user
+	        ON vine.userID=user.id
+	        INNER JOIN vine_job
 	    	ON vine_job.vineID=vine.id
 	   		INNER JOIN job
 	    	ON job.id = vine_job.jobID
@@ -93,5 +96,6 @@ class VideoData:
 		_id = vid[1]
 		description = vid[2][:100] + '...' if len(vid[2]) > 100 else vid[2]
 		title = "%s_%s" % (_id, self.job._id)
+		user = vid[3]
 
-		return VineVideo(url, _id, description, title)
+		return VineVideo(url, _id, description, title, user)

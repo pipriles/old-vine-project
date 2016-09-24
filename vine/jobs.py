@@ -158,10 +158,11 @@ class JobData:
 		self._change_status(new_status, db)
 
 	def can_scrape(self):
-		return self.status[0] == '0'
+		return self.status[0] == '0' and (
+			self.__combining == 0 or self.status[1] == '1')
 
 	def can_combine(self):
-		return True if self.status[:2] == '00' else False
+		return self.status[:2] == '00'
 
 	def scrape_pending(self):
 		return True if self.__scraping > 0 else False

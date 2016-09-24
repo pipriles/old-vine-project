@@ -2,6 +2,8 @@
 
 from collections import namedtuple
 
+WORDS_DIR = "./vine/stopwords/"
+
 # Web groub for permissions
 
 WEB_GROUP = "http"

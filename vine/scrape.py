@@ -237,12 +237,12 @@ def args_for_insert_vine(vine):
 
 # Ugly crap
 def fix(title):
-	if "w/" in title: title = title[:title.find("w/")-1]
-	elif "W/" in title: title = title[:title.find("W/")-1]
-	title = re.sub("[^a-zA-Z 0-9#@]", '', title).split()
-	title = ' '.join(filter(lambda x: '#' not in x and '@' not in x, title))
-
-	return title
+	return title.encode('ascii','ignore')
+	#if "w/" in title: title = title[:title.find("w/")-1]
+	#elif "W/" in title: title = title[:title.find("W/")-1]
+	#title = re.sub("[^a-zA-Z 0-9#@]", '', title).split()
+	#title = ' '.join(filter(lambda x: '#' not in x and '@' not in x, title))
+	#return title
 
 # Maybe useful
 def set_utf8mb4(db):

@@ -120,6 +120,7 @@ def main():
 			# Main logic of the script
 			if STATUS: 
 				process_jobs()
+				
 			clean_zombies()
 			update_jobs()
 				

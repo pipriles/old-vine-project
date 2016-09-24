@@ -75,7 +75,7 @@ class VideosSpell:
 		# Should i Pool?
 
 		for vid in self.downloaded:
-			ret = convert_video(vid.title, vid.description, conf)
+			ret = convert_video(vid, conf)
 			if ret != "":
 				self.data.set_as_used(vid.id)
 				self.converted.append(ret)
@@ -107,7 +107,7 @@ class VideosSpell:
 			file = config.video_path + '%s.mp4' % self.final
 			description = None
 			category = 22
-			keywords = None
+			keywords = yt.gen_keywords(self.downloaded)
 			privacyStatus = yt.PRIVACY_STATUS[0]
 
 			for x in accounts:
@@ -129,7 +129,7 @@ class VideosSpell:
 
 def combine_videos(vids, name):
 
-	videos = "|".join(vids)
+	videos = "|".join([config.video_path + "%s.mpg" % x.title for x in vids])
 	
  	command = [
  		config.ffmpeg_bin, '-y', '-i', 
@@ -139,15 +139,15 @@ def combine_videos(vids, name):
  	]
 	call(command)
 
-def convert_video(title, sub, conf):
+def convert_video(vid, conf):
 
-	result = ""
+	result = None
 
 	cfilter  = "[0:v]scale=%s[scaled];" % conf.scale_1
 	cfilter += "[1:v]scale=%s[scaled2];" % conf.scale_2
 	cfilter += " [scaled][scaled2]overlay=(main_w-overlay_w)/2:0:shortest=1[res];"
 	cfilter += " [res]drawtext=fontfile=%s" % config.font_path + conf.font
-	cfilter += ":text='%s':x=%s: y=%s:" % (sub, conf.text_x, conf.text_y)
+	cfilter += ":text='%s':x=%s: y=%s:" % (vid.description, conf.text_x, conf.text_y)
 	cfilter += " fontsize=%s:fontcolor=%s" % (conf.font_size, conf.font_color)
 	cfilter += ":box=1:boxcolor=%s[out]" % conf.font_background_color
 
@@ -156,17 +156,17 @@ def convert_video(title, sub, conf):
 		config.ffmpeg_bin, 
 		'-loop', '1', 
 		'-i', config.image_path + '%s' % conf.image, 
-		'-i', config.video_path + "%s.mp4" % (title), 
+		'-i', config.video_path + "%s.mp4" % (vid.title), 
 		'-filter_complex', 
 		cfilter,
 		'-map', '[out]', 
 		'-map', '1:a',
 		'-y', '-qscale:v', '1',
-		config.video_path + '%s.mpg' % title
+		config.video_path + '%s.mpg' % vid.title
 	]
 
 	if call(command) == 0:
-		result = config.video_path + "%s.mpg" % title
+		result = vid
 
 	return result
 
