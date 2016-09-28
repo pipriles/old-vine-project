@@ -147,7 +147,8 @@ class Scraper:
 				'likes': value["likes"]["count"],
 				'comments': value["comments"]["count"],
 				'reposts': value["reposts"]["count"],
-				'created': value["created"]
+				'created': value["created"],
+				'entities': value['entities']
 			})
 
 	# This miss occurs sometimes
@@ -224,8 +225,8 @@ def args_for_insert_user(vine):
 
 def args_for_insert_vine(vine):
 
-	# Filter emoji and hashtags
-	title = fix(vine['description'])
+	# Filter unicode 
+	title = fix_description(vine)
 
 	# Convert the time in a compatible time for the database
 	created = dt.strptime(vine['created'], "%Y-%m-%dT%H:%M:%S.%f")
@@ -235,9 +236,32 @@ def args_for_insert_vine(vine):
 		vine['reposts'], created.strftime('%Y-%m-%d %H:%M:%S'), 
 		vine['loops'], vine['likes'], vine['comments'], vine['reposts'],)
 
-# Ugly crap
-def fix(title):
-	return title.encode('ascii','ignore')
+def fix_description(vine):
+
+	t = list(vine['description'])
+	dif = 0
+
+	entities = sorted(vine['entities'], key=lambda x: x['range'][0])
+
+	for x in entities:
+		r = x['range']
+		t.insert(r[0]+dif  , '[')
+		t.insert(r[1]+dif+1, ']')
+		dif += 2
+
+	title = ''.join(t)
+	title = ' '.join(title.split())
+
+	# .encode('ascii', 'ignore')
+	# Need to filter emoji
+	# #hashtags, @users,
+	# nonalphanumeric 
+	# Not sense descriptions
+	# Remove extra whitespaces
+
+	return title
+
+	# Old ugly crap code
 	#if "w/" in title: title = title[:title.find("w/")-1]
 	#elif "W/" in title: title = title[:title.find("W/")-1]
 	#title = re.sub("[^a-zA-Z 0-9#@]", '', title).split()

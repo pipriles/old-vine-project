@@ -38,14 +38,18 @@ class CombineProcess(Process):
 			cast.download_videos()
 			cast.convert_videos()
 			cast.combine_videos()
-
-			# If autoupload flag is set
-			cast.upload_video()
-
 		finally:
 			cast.clean_videos()
 			self.job.finish_combine(self.db)
 			logger.info("Finished combine process")
+
+		try:
+			# If autoupload flag is set
+			self.job.start_upload(self.db)
+			cast.upload_video()
+		finally:
+			self.job.finish_upload(self.db)
+			logger.info("Finished upload process")
 
 # Maybe this class should have inside
 # a VideoData initialization and not 
@@ -101,7 +105,6 @@ class VideosSpell:
 			logger.debug(accounts)
 
 			# What should i put in the description?
-			# I have to do the keywords part
 			# Maybe a settings for the privacy
 
 			file = config.video_path + '%s.mp4' % self.final
@@ -112,7 +115,7 @@ class VideosSpell:
 
 			for x in accounts:
 				user = x[0]
-				title = x[1]
+				title = yt.make_title(x[1], self.data.job)
 				args = yt.UploadVideo(user, file, title, 
 					description, category, keywords, privacyStatus)
 
@@ -175,5 +178,6 @@ def change_group(name):
 	call(command)
 
 # Not completed
+
 if __name__ == '__main__':
 	main()

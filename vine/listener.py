@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
 
 # This module will listen for commands, interpret
 # them and make the script change its flow

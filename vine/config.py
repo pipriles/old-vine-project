@@ -29,7 +29,7 @@ MAX_COMBINE = 1
 DEFAULT_SETTINGS = ("0", "1280:720", "720:720",
 	"(main_w/2-text_w/2)", "(main_h)-50",
 	"Text here please", "32", "black@1", "white@0.7", 
-	"FreeSerif.ttf", "Vine_Numbers.jpg")
+	"NotoSans-Regular.ttf", "Vine_Numbers.jpg")
 
 # Settings struct
 

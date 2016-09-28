@@ -65,9 +65,9 @@ class Database:
 
 	# Each module makes a query
 
-	def query(self, sql):
+	def query(self, sql, args=()):
 		logger.debug(sql)
 		dbc = self.db.cursor()
-		dbc.execute(sql)
+		dbc.execute(sql, args)
 		self.commit()
 		return dbc

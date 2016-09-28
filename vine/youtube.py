@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
 
 # This module provides an interface for
 # Yotube data and functions
@@ -6,7 +6,7 @@
 import logging
 import httplib 		# For exceptions
 import httplib2
-import datetime
+import datetime as dt
 import re
 
 from apiclient.discovery import build
@@ -40,6 +40,42 @@ fields += "keywords "
 fields += "privacyStatus"
 
 UploadVideo = namedtuple("UploadVideo", fields)
+
+def make_title(title, job):
+	
+	""" Generate a YouTube video title
+		
+	This function uses a list of names to generate
+	a title for a YouTube video
+
+	Returns:
+		The video title as a string
+	
+	Notes:
+		This function also uses the datetime 
+		formatting to give the current date
+	"""
+
+	def _interpret(var):
+		return str({
+			'[COUNT]':		job.combine_limit,
+			'[D_HOUR]':		int(job.combine_limit * 0.0016666),
+			'[D_MINUTES]':	int(job.combine_limit * 0.1),
+			'[D_SECONDS]':	6 * job.combine_limit,
+			'[L_DAYS]':		job.date_limit,
+			'[L_HOURS]':	int(job.date_limit * 24),
+			'[L_MINUTES]':	int(job.date_limit * 1440),
+			'[L_SECONDS]':	int(job.date_limit * 86400),
+			'[I_DAYS]':		int(job.combine_interval / 1440),
+			'[I_HOURS]':	int(job.combine_interval / 60),
+			'[I_MINUTES]':	job.combine_interval,
+			'[I_SECONDS]': 	int(job.combine_interval * 60)
+		}.get(var, var))
+
+	words = re.split(r'(\[[\w\d]+\])', title)
+	new = ''.join(map(_interpret, words))
+
+	return dt.datetime.now().strftime(new)
 
 def gen_keywords(vids):
 	
@@ -98,7 +134,7 @@ class YouTubeData:
 
 		access_token = token[1]
 		refresh_token = token[4]
-		token_expiry = datetime.datetime.strptime(token[3], EXPIRY_FORMAT)
+		token_expiry = dt.datetime.strptime(token[3], EXPIRY_FORMAT)
 
 		return (access_token, CLIENT_ID, CLIENT_SECRET,
 			refresh_token, token_expiry, TOKEN_URI, None,)
