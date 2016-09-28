@@ -28,8 +28,8 @@ MAX_COMBINE = 1
 
 DEFAULT_SETTINGS = ("0", "1280:720", "720:720",
 	"(main_w/2-text_w/2)", "(main_h)-50",
-	"Text here please", "32", "black@1", "white@0.7", 
-	"NotoSans-Regular.ttf", "Vine_Numbers.jpg")
+	"Text here please", "26", "black@1", "white@0.7", 
+	"OpenSansEmoji.ttf", "Vine_Numbers.jpg")
 
 # Settings struct
 
@@ -52,6 +52,6 @@ def get_settings(conf_id, db):
 		return Settings(*conf)
 	else:
 		sql = "SELECT * FROM settings WHERE id = %s;"
-		dbc = db.query(sql % conf_id)
+		dbc = db.query(sql, (conf_id,))
 		conf = dbc.fetchone()
 		return Settings(*conf)

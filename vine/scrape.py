@@ -163,28 +163,28 @@ class VineData:
 
 	def insert_user(self, user):
 		sql  = "INSERT INTO user (id, name, banned)"
-		sql += ' VALUES ("%s", "%s", 0) '
+		sql += ' VALUES (%s, %s, 0) '
 		sql += "ON DUPLICATE KEY UPDATE"
 		sql += " id=id"
 
-		self.db.query(sql % user)
+		self.db.query(sql, user)
 
 	def insert_vine(self, vine):
 		sql  = "INSERT INTO vine (id, url, title, userID, views, likes, comments, reposts, date)"
-		sql += ' VALUES ("%s", "%s", "%s", "%s", %s, %s, %s, %s, "%s") '
+		sql += ' VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) '
 		sql += "ON DUPLICATE KEY UPDATE"
 		sql += " views = %s, likes = %s, comments = %s, reposts = %s, dbdate = NOW()"
 
-		self.db.query(sql % vine)
+		self.db.query(sql, vine)
 
 	def link_to_job(self, vine):
 		sql  = "INSERT INTO vine_job (jobID, vineID, used)"
-		sql += ' VALUES (%s, "%s", 0) '
+		sql += ' VALUES (%s, %s, 0) '
 		sql += "ON DUPLICATE KEY UPDATE"
 		sql += " jobID=jobID"
 
 		args = (self.job._id, vine)
-		self.db.query(sql % args)
+		self.db.query(sql, args)
 
 
 class ScrapeProcess(Process):

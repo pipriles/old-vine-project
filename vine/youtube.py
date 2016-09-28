@@ -57,6 +57,7 @@ def make_title(title, job):
 	"""
 
 	def _interpret(var):
+
 		return str({
 			'[COUNT]':		job.combine_limit,
 			'[D_HOUR]':		int(job.combine_limit * 0.0016666),
@@ -128,8 +129,8 @@ class YouTubeData:
 			Remember to close your database connection
 		"""
 		
-		sql = "SELECT * FROM account WHERE account.user = '%s';"
-		result = self._db.query(sql % self._user)
+		sql = "SELECT * FROM account WHERE account.user = %s;"
+		result = self._db.query(sql, (self._user,))
 		token = result.fetchone()
 
 		access_token = token[1]
@@ -153,16 +154,17 @@ class YouTubeData:
 		"""
 
 		sql =  "UPDATE account SET"
-		sql += " access_token = '%s',"
-		sql += " token_expiry = '%s' "
+		sql += " access_token = %s,"
+		sql += " token_expiry = %s "
 		sql += "WHERE"
-		sql += " user = '%s'"
+		sql += " user = %s"
+
 
 		token_info = (creds.access_token, 
 			creds.token_expiry.strftime(EXPIRY_FORMAT), 
-			self._user,)
+			self._user)
 
-		result = self._db.query(sql % token_info)
+		result = self._db.query(sql, token_info)
 		self._db.commit()
 
 

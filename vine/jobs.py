@@ -88,7 +88,7 @@ class JobData:
 
 	def refresh_job(self, db):
 		sql = "SELECT * FROM job WHERE job.id = %s"
-		dbc = db.query(sql % self._id)
+		dbc = db.query(sql, (self._id,))
 		new = dbc.fetchone()
 		self.__init__(*new)
 
@@ -96,7 +96,7 @@ class JobData:
 		sql  = "SELECT accountID, title, language"
 		sql += " FROM job_account "
 		sql += "WHERE jobID = %s"
-		dbc = db.query(sql % self._id)
+		dbc = db.query(sql, (self._id,))
 		return dbc.fetchall()
 
 	def get_settings(self, db):
@@ -112,22 +112,22 @@ class JobData:
 
 	def _change_status(self, new_status, db):
 		self.status = new_status
-		sql  = "UPDATE job SET job.status = '%s' WHERE job.id = '%s'"
-		db.query(sql % (new_status, self._id))
+		sql  = "UPDATE job SET job.status = %s WHERE job.id = %s"
+		db.query(sql, (new_status, self._id))
 
 	def update_scrape_time(self, db):
 		interval = dt.timedelta(minutes=self.scrape_interval)
 		self.next_scrape = dt.datetime.now() + interval
 
-		sql = "UPDATE job SET job.next_scrape = '%s' WHERE job.id = '%s'"
-		db.query(sql % (to_string(self.next_scrape), self._id)) 
+		sql = "UPDATE job SET job.next_scrape = %s WHERE job.id = %s"
+		db.query(sql, (to_string(self.next_scrape), self._id)) 
 
 	def update_combine_time(self, db):
 		interval = dt.timedelta(minutes=self.combine_interval)
 		self.next_combine = dt.datetime.now() + interval
 
-		sql = "UPDATE job SET job.next_combine = '%s' WHERE job.id = '%s'"
-		db.query(sql % (to_string(self.next_combine), self._id)) 
+		sql = "UPDATE job SET job.next_combine = %s WHERE job.id = %s"
+		db.query(sql, (to_string(self.next_combine), self._id)) 
 
 	def start_scrape(self, db):
 		new_status = '1' + self.status[1] + self.status[2]

@@ -2,6 +2,7 @@
 
 import logging
 import datetime as dt
+import re
 
 from subprocess import call
 from functools import partial
@@ -80,7 +81,7 @@ class VideosSpell:
 
 		for vid in self.downloaded:
 			ret = convert_video(vid, conf)
-			if ret != "":
+			if ret:
 				self.data.set_as_used(vid.id)
 				self.converted.append(ret)
 
@@ -146,13 +147,15 @@ def convert_video(vid, conf):
 
 	result = None
 
-	cfilter  = "[0:v]scale=%s[scaled];" % conf.scale_1
+	description = fix_description(vid.description)
+
+	cfilter  = "\"[0:v]scale=%s[scaled];" % conf.scale_1
 	cfilter += "[1:v]scale=%s[scaled2];" % conf.scale_2
 	cfilter += " [scaled][scaled2]overlay=(main_w-overlay_w)/2:0:shortest=1[res];"
 	cfilter += " [res]drawtext=fontfile=%s" % config.font_path + conf.font
-	cfilter += ":text='%s':x=%s: y=%s:" % (vid.description, conf.text_x, conf.text_y)
+	cfilter += ":text='%s' :x=%s: y=%s:" % (description, conf.text_x, conf.text_y)
 	cfilter += " fontsize=%s:fontcolor=%s" % (conf.font_size, conf.font_color)
-	cfilter += ":box=1:boxcolor=%s[out]" % conf.font_background_color
+	cfilter += ":box=1:boxcolor=%s[out]\"" % conf.font_background_color
 
 	# Horrible magic ffmpeg command
 	command = [
@@ -162,16 +165,42 @@ def convert_video(vid, conf):
 		'-i', config.video_path + "%s.mp4" % (vid.title), 
 		'-filter_complex', 
 		cfilter,
-		'-map', '[out]', 
+		'-map', '"[out]"', 
 		'-map', '1:a',
 		'-y', '-qscale:v', '1',
 		config.video_path + '%s.mpg' % vid.title
 	]
 
-	if call(command) == 0:
+	logger.debug('')
+	logger.debug('DESCRIPTION: ' + description)
+	logger.debug(' '.join(command))
+	logger.debug('')
+
+	if call(' '.join(command), shell=True) == 0:
 		result = vid
 
 	return result
+
+def fix_description(description):
+
+	pattern  = r'[^\w\d]?vc[^\w\d]?|'
+	pattern += r'[^\w\d]?ac[^\w\d]?|'
+	pattern += r'[^\w\d]?ib[^\w\d]?|'
+	pattern += r'[^\w\d]?dt[^\w\d]?|'
+	pattern += r'[^\w\d]?[\\/]w\s?|'
+	pattern += r'\[[^\[\]]*\]'
+
+	description = re.sub(pattern, '', description, flags=re.IGNORECASE)
+	description = ' '.join(description.split())
+	
+	description = description.replace("'", "\'\\\\\\\\\\\'\'")
+	description = description.replace('"', '\\\"')
+	description = description.replace(':', '\\:')
+
+	if len(description) > 90:
+		description = u'{}...'.format(description[:90])
+
+	return description
 
 def change_group(name):
 	command = ['chgrp', config.WEB_GROUP, config.video_path + '%s.mp4' % name]
