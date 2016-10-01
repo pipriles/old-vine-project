@@ -85,17 +85,31 @@ class VideoData:
 	    """
 
 		result = self.db.query(sql, (self.job._id, self.job.combine_limit))
-		return map(self._make_it_pretty, result.fetchall())
+		return map(_make_it_pretty, result.fetchall())
 
-	def _make_it_pretty(self, vid):
-	
-		# I should make a column description length
-		# in the settings table
+def _make_it_pretty(vid):
 
-		url = vid[0]
-		_id = vid[1]
-		description = vid[2] # vid[2][:100] + '...' if len(vid[2]) > 100 else vid[2]
-		title = "%s_%s" % (_id, self.job._id)
-		user = vid[3]
+	# I should make a column description length
+	# in the settings table
+	# There should not be a title field
 
-		return VineVideo(url, _id, description, title, user)
+	url = vid[0]
+	_id = vid[1]
+	description = vid[2]
+	title = "%s_%s" % (_id, self.job._id)
+	user = vid[3]
+
+	return VineVideo(url, _id, description, title, user)
+
+def get_videos(db, limit):
+
+	# Get some videos
+	sql  = "SELECT vine.url, vine.id, vine.title, user.name"
+	sql += " FROM vine "
+	sql += "INNER JOIN user"
+	sql += " ON vine.userID=user.id "
+	sql += "ORDER BY RAND() "
+	sql += "LIMIT %s"
+
+	result = db.query(sql, (limit,))
+	return map(_make_it_pretty, result.fetchall())

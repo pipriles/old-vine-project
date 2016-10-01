@@ -81,7 +81,7 @@ def make_title(title, job):
 def gen_keywords(vids):
 	
 	tags = {}
-	regex = re.compile(r'[\w\d]{2,}')
+	regex = re.compile(r'[\w]{2,}')
 	stop_words = _get_stop_words()
 
 	for vid in vids:
