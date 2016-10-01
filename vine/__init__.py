@@ -17,4 +17,4 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(logging.Formatter(LOG_FORMAT))
 logger.addHandler(stream_handler)
 
-__all__ = ['VineJobs', 'SocketProcess', 'ScrapeProcess', 'CombineProcess', 'Database']
+__all__ = ['VineJobs', 'SocketProcess', 'ScrapeProcess', 'CombineProcess', 'Database', 'config']

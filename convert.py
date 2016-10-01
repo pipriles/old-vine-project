@@ -45,16 +45,24 @@ def convert_video(vid, conf):
 
 def fix_description(description):
 
-	pattern  = r'[^\w\d]?vc[^\w\d]?|'
-	pattern += r'[^\w\d]?ac[^\w\d]?|'
-	pattern += r'[^\w\d]?ib[^\w\d]?|'
-	pattern += r'[^\w\d]?dt[^\w\d]?|'
-	pattern += r'[^\w\d]?[\\/]w\s?|'
-	pattern += r'\[[^\[\]]*\]'
-
+	pattern  = r'((?:((?<!\w)[\\/]?w[\\/]?|'
+	pattern += r'[avtc]c|ib|[yd]t)'
+	pattern += r'[\:\|\/\\\-\_\s\!]*)?'
+	pattern += r'(?:[\:\|\/\\\&\-\_\,\+\s]*))*'
+	pattern += r'(\[[^\[\]]*\]|\@\w+)(\'\w+)?'
+	
+	# Remove the ugly vine slang
 	description = re.sub(pattern, '', description, flags=re.IGNORECASE)
-	description = ' '.join(description.split())
 
+	pattern  = r'[\{\(\[][\s\W]*[\}\)\]]|'
+	pattern += r'([\|\'\"])[\s\W]*\1'
+	
+	# Remove the empty enclose symbols
+	description = re.sub(pattern, '', description)
+
+	# Remove the extra white spaces
+	description = re.sub(r'\s{2,}', ' ', description)
+	
 	description = description.replace("'", "\'\\\\\\\\\\\'\'")
 	description = description.replace('"', '\\\"')
 	description = description.replace(':', '\\:')
