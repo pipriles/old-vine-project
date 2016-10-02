@@ -1,9 +1,24 @@
 #!/usr/bin/env python2
 
+import os
+import sys
+import re
+import argparse
+
 from subprocess import call
 from collections import namedtuple
+
+# Path to the vine module
+path = os.path.realpath(__file__)
+for x in range(3): 
+	path = os.path.dirname(path)
+sys.path.insert(0, path)
+
 from vine import config 
-import re
+
+config.video_path = "{}/{}".format(path, config.video_path)
+config.image_path = "{}/{}".format(path, config.image_path)
+config.font_path = "{}/{}".format(path, config.font_path)
 
 def convert_video(vid, conf):
 
@@ -14,7 +29,7 @@ def convert_video(vid, conf):
 	cfilter  = "\"[0:v]scale=%s[scaled];" % conf.scale_1
 	cfilter += "[1:v]scale=%s[scaled2];" % conf.scale_2
 	cfilter += " [scaled][scaled2]overlay=(main_w-overlay_w)/2:0:shortest=1[res];"
-	cfilter += " [res]drawtext=fontfile=%s" % config.font_path + conf.font
+	cfilter += " [res]drawtext=fontfile='%s'" % (config.font_path + conf.font)
 	cfilter += ":text='%s' :x=%s: y=%s:" % (description, conf.text_x, conf.text_y)
 	cfilter += " fontsize=%s:fontcolor=%s" % (conf.font_size, conf.font_color)
 	cfilter += ":box=1:boxcolor=%s[out]\"" % conf.font_background_color
@@ -23,14 +38,14 @@ def convert_video(vid, conf):
 	command = [
 		config.ffmpeg_bin, 
 		'-loop', '1', 
-		'-i', config.image_path + '%s' % conf.image, 
-		'-i', config.video_path + "%s.mp4" % (vid.title), 
+		'-i \'{}{}\''.format(config.image_path, conf.image), 
+		'-i \'{}{}.mp4\''.format(config.video_path, vid.title), 
 		'-filter_complex', 
 		cfilter,
 		'-map', '"[out]"', 
 		'-map', '1:a',
 		'-y', '-qscale:v', '1',
-		config.video_path + '%s.mpg' % vid.title
+		"\'{}{}.mpg\'".format(config.video_path, vid.title)
 	]
 
 	print ''
@@ -77,8 +92,6 @@ fields += "description"
 Video = namedtuple('Video', fields)
 
 def main():
-
-	import argparse
 
 	parse = argparse.ArgumentParser(description="Convert script")
 

@@ -1,8 +1,10 @@
 #!/usr/bin/env python2
 
+import os
 from collections import namedtuple
 
-WORDS_DIR = "./vine/stopwords/"
+path = os.path.dirname(os.path.realpath(__file__))
+WORDS_DIR = path + "/stopwords/"
 
 # Web groub for permissions
 
@@ -15,9 +17,9 @@ sleep_time = 1
 # Combine settings
 
 ffmpeg_bin = "ffmpeg"
-video_path = "./res/videos/"
-image_path = "./res/images/"
-font_path  = "./res/fonts/"
+video_path = "res/videos/"
+image_path = "res/images/"
+font_path  = "res/fonts/"
 
 # Job settings
 

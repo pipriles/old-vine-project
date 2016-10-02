@@ -92,11 +92,12 @@ def _make_it_pretty(vid):
 	# I should make a column description length
 	# in the settings table
 	# There should not be a title field
+	# - It should be just one id field
 
 	url = vid[0]
 	_id = vid[1]
 	description = vid[2]
-	title = "%s_%s" % (_id, self.job._id)
+	title = str(_id)
 	user = vid[3]
 
 	return VineVideo(url, _id, description, title, user)

@@ -7,7 +7,9 @@ import logging
 import httplib 		# For exceptions
 import httplib2
 import datetime as dt
+import unicodedata
 import re
+
 
 from apiclient.discovery import build
 from apiclient.errors import HttpError
@@ -85,7 +87,9 @@ def gen_keywords(vids):
 	stop_words = _get_stop_words()
 
 	for vid in vids:
-		data = regex.findall(vid.description)
+		description = unicodedata.normalize('NFD', vid.description)
+		description = description.encode('ascii', 'ignore')
+		data = regex.findall(description)
 		data = [x.lower() for x in data]
 		for word in data:
 			if word not in stop_words:
