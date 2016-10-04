@@ -23,6 +23,8 @@ from database import Database
 
 logger = logging.getLogger(__name__)
 
+# Move this to the config module
+
 CLIENT_ID = "892925157774-u9l5kehvb7fgnqnb86rdoj0a3ek6ktd0.apps.googleusercontent.com"
 CLIENT_SECRET = "k52sVi1FQCr4rj-NOICvSDDZ"
 TOKEN_URI = "https://accounts.google.com/o/oauth2/token"
@@ -75,7 +77,7 @@ def make_title(title, job):
 			'[I_SECONDS]': 	int(job.combine_interval * 60)
 		}.get(var, var))
 
-	words = re.split(r'(\[[\w\d]+\])', title)
+	words = re.split(r'(\[[\w]+\])', title)
 	new = ''.join(map(_interpret, words))
 
 	return dt.datetime.now().strftime(new)
@@ -84,7 +86,7 @@ def gen_keywords(vids):
 	
 	tags = {}
 	regex = re.compile(r'[\w]{2,}')
-	stop_words = _get_stop_words()
+	stop_words = _get_stop_words("english")
 
 	for vid in vids:
 		description = unicodedata.normalize('NFD', vid.description)
@@ -106,11 +108,12 @@ def _add_tag(tags, word):
 	else:
 		tags[word] = 1
 
-def _get_stop_words():
+def _get_stop_words(lang):
 
-	with open(config.WORDS_DIR + "english.txt") as f: 
+	path = config.WORDS_DIR + "{}.txt".format(lang)
+	with open(path) as f: 
 		stop_words = f.read().split()
-	
+
 	return stop_words
 
 class YouTubeData:
@@ -169,8 +172,6 @@ class YouTubeData:
 			self._user)
 
 		result = self._db.query(sql, token_info)
-		self._db.commit()
-
 
 def get_authenticated_service(data):
 
@@ -238,7 +239,7 @@ def init_upload(youtube, opt):
 	except IOError:
 		exit("You lied to me!")
 
-	upload_video(upload_request)
+	return upload_video(upload_request)
 
 def upload_video(request):
 	
@@ -255,13 +256,17 @@ def upload_video(request):
 			logger.debug(result)
 			logger.warning("Bad response trying to upload the video :(")
 
+	return result['id']
+
 def upload_from_args(args, db):
+	url = None
 	data = YouTubeData(args.user, db)
 	youtube = get_authenticated_service(data)
 	try:
-		init_upload(youtube, args)
+		url = init_upload(youtube, args)
 	except HttpError, e:
 		logger.error("An HTTP error %d occurred:\n%s" % (e.resp.status, e.content))
+	return url
 #
 # This is a test to upload 
 # a video to youtube 

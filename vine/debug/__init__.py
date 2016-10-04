@@ -1,1 +1,0 @@
-"/home/oswald/Documents/Work/Vine Scraper/script/vine"

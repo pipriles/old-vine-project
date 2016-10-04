@@ -63,6 +63,9 @@ class VideosSpell:
 		self.downloaded = []
 		self.converted = []
 
+		now = dt.datetime.now().strftime(DT_FORMAT)
+		self.name = str(self.data.job._id) + "_" + now
+
 	def download_videos(self):
 
 		top = self.data.get_top_videos()
@@ -71,28 +74,32 @@ class VideosSpell:
 		# already exists
 
 		self.downloaded = dl.download_videos(top)
-		logger.debug(self.downloaded)
+
+		for vid in self.downloaded:
+			logger.debug(vid)
 
 	def convert_videos(self):
 
 		conf = self.data.get_settings()
 		
-		# Should i Pool?
+		# Here we should create the video
+		self.data.create_video(self.name)
 
+		position = 0
 		for vid in self.downloaded:
 			ret = convert_video(vid, conf)
 			if ret:
 				self.data.set_as_used(vid.id)
+				# Here we should link with the video
+				self.data.link_vine(vid.id, position)
 				self.converted.append(ret)
+				position += 1
 
 	def combine_videos(self):
 
 		if self.converted:
-			now = dt.datetime.now().strftime(DT_FORMAT)
-			name = str(self.data.job._id) + "_" + now
-			combine_videos(self.converted, name)
-			change_group(name)
-			self.final = name
+			combine_videos(self.converted, self.name)
+			change_group(self.name)
 		else:
 			logger.warning("Could not convert all the videos")
 
@@ -100,7 +107,7 @@ class VideosSpell:
 
 		logger.debug(self.data.job.autoupload)
 
-		if self.data.job.autoupload and hasattr(self, 'final'):
+		if self.data.job.autoupload:
 
 			accounts = self.data.get_accounts()
 			logger.debug(accounts)
@@ -108,7 +115,7 @@ class VideosSpell:
 			# What should i put in the description?
 			# Maybe a settings for the privacy
 
-			file = config.video_path + '%s.mp4' % self.final
+			file = config.video_path + '%s.mp4' % self.name
 			description = None
 			category = 22
 			keywords = yt.gen_keywords(self.downloaded)
@@ -121,7 +128,10 @@ class VideosSpell:
 					description, category, keywords, privacyStatus)
 
 				# Upload the video
-				yt.upload_from_args(args, self.data.db)
+				url = yt.upload_from_args(args, self.data.db)
+
+				# Here we should link to an account
+				self.data.link_account(user, title, url)
 
 	def clean_videos(self):
 
@@ -176,6 +186,7 @@ def convert_video(vid, conf):
 	logger.debug(' '.join(command))
 	logger.debug('')
 
+	# Ugly join call should not be used
 	if call(' '.join(command), shell=True) == 0:
 		result = vid
 

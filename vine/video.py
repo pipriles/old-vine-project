@@ -16,10 +16,45 @@ VineVideo = namedtuple("VineVideo", fields)
 
 class VideoData:
 
+	# This class should like the jobs class
+	# I will change this in the future
+
 	def __init__(self, db, job=None, conf_id=None):
 		self.db = db
 		self.job = job
 		self.conf_id = conf_id
+
+	def create_video(self, name):
+
+		sql  = "INSERT INTO video (`settingsID`, `source`, `name`, `date`, `status`) "
+		sql += "VALUES (%s, %s, %s, NOW(), '00')"
+
+		args = (self.job.settings_id, self.job.url, name)
+		dbc = self.db.query(sql, args)
+		self._id = dbc.lastrowid
+
+	# I have to make a function 
+	# to set as combined or uploaded
+
+	def change_status(self, status):
+		sql = "UPDATE video SET status = %s WHERE id = %s"
+		self.db.query(sql, (status, self._id))
+
+	def link_vine(self, vine, position):
+		# Video should have a id attribute
+		sql  = "INSERT INTO vine_video (`vineID`, `videoID`, `position`) "
+		sql += "VALUES (%s, %s, %s)"
+
+		args = (vine, self._id, position)
+		self.db.query(sql, args)
+
+	def link_account(self, account, title, url, lang='EN'):
+
+		sql  = "INSERT INTO video_account (videoID, accountID, title, language, url) "
+		sql += "VALUES (%s, %s, %s, %s, %s)"
+
+		args = (self._id, account, title, lang, url)
+		self.db.query(sql, args)
 
 	def get_settings(self):
 
