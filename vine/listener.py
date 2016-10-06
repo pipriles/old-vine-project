@@ -8,6 +8,7 @@ import socket
 import multiprocessing as mp
 import subprocess as sp
 import logging
+import time
 
 CONFIGURE_SCRIPT =  '/home/oswald/Documents/Work'
 CONFIGURE_SCRIPT += '/Vine Scraper/script/configure.sh'
@@ -37,7 +38,11 @@ class SocketProcess(mp.Process):
 				self.interpret_msg(msg)()
 			except KeyboardInterrupt:
 				break
+			except socket.error, e:
+				logger.critical('Broken pipe!')
 			except Exception as e:
+				# I should handle the broken pipe
+				logger.critical(e)
 				logger.critical("Socket process: %s", type(e).__name__)
 				break
 			finally:
@@ -69,13 +74,16 @@ class SocketProcess(mp.Process):
 		self.terminate()
 		# Should i call terminate?
 
+	def not_valid(self):
+		self._sock.send('NOT VALID')
+
 	def interpret_msg(self, msg):
 		msg = msg.upper()
 		return {
 			'CHANGE STATUS': self.toggle_status,
 			'GET STATUS': self.__get_status,
-			'REFRESH JOBS': self.refresh_jobs
-		}[msg]
+			'REFRESH JOBS': self.refresh_jobs_on
+		}.get(msg, self.not_valid)
 
 class ListenSocket:
 	
@@ -131,11 +139,14 @@ def clear_socket_path():
 if __name__ == '__main__':
 
 	# Listener Test
-	
+	logging.basicConfig(level=logging.DEBUG)
+
 	test = SocketProcess()
 	test.start()
 
 	try: 
 		while 1: pass # Butt loop
 	except:
+		test.stop()
+		test.join()
 		exit('\n- Finished main process')
