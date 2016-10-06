@@ -5,74 +5,48 @@
 
 import os
 import socket
-import multiprocessing as mp
 import subprocess as sp
 import logging
 import time
+import config
 
-CONFIGURE_SCRIPT =  '/home/oswald/Documents/Work'
-CONFIGURE_SCRIPT += '/Vine Scraper/script/configure.sh'
-
-SOCKET_FOLDER = '/tmp/SCRAPE'
-SOCKET_PATH = SOCKET_FOLDER + '/SCRAPE_SOCKET'
-
-MAX_CLIENTS = 1
+from threading import Thread, Lock
 
 logger = logging.getLogger(__name__)
 
-class SocketProcess(mp.Process):
+class SocketProcess(Thread):
 
 	def __init__(self, id="Listen_Process", sock=None):
 		super(SocketProcess, self).__init__(name=id)
 		self._sock = ListenSocket()
-		self.SCRIPT_STATUS = mp.Value('i', 1)
-		self.DIRTY_JOBS = mp.Value('i', 0)
 
 	def run(self):
 		logger.info('Listening to socket...')
-		while True:
+		while self._sock.alive():
 			try:
 				self._sock.wait()
 				msg = self._sock.recv()
 				logger.debug('-> Message: %s', msg)
 				self.interpret_msg(msg)()
-			except KeyboardInterrupt:
-				break
 			except socket.error, e:
-				logger.critical('Broken pipe!')
+				logger.debug('Broken pipe!')
 			except Exception as e:
-				# I should handle the broken pipe
 				logger.critical(e)
 				logger.critical("Socket process: %s", type(e).__name__)
-				break
+				self.stop()
 			finally:
 				self._sock.disconnect()
 
 	def toggle_status(self):
-		new_status = not self.SCRIPT_STATUS.value
-		self.SCRIPT_STATUS.value = new_status
+		new_status = not config.SCRIPT_STATUS
+		config.SCRIPT_STATUS = new_status
 
-	def __get_status(self):
-		status = str(self.SCRIPT_STATUS.value)
+	def get_status(self):
+		status = "1" if config.SCRIPT_STATUS else "0"
 		self._sock.send(status)
 
-	def refresh_jobs_on(self):
-		self.DIRTY_JOBS.value = 1
-
-	def refresh_jobs_off(self):
-		self.DIRTY_JOBS.value = 0
-
-	def need_refresh_jobs(self):
-		if self.DIRTY_JOBS.value:
-			logger.debug("Script needs to refresh jobs")
-			return True
-		else:
-			return False
-
-	def stop(self):
-		self._sock.close()
-		self.terminate()
-		# Should i call terminate?
+	def refresh_jobs(self):
+		config.DIRTY_JOBS = 1
 
 	def not_valid(self):
 		self._sock.send('NOT VALID')
@@ -81,9 +55,13 @@ class SocketProcess(mp.Process):
 		msg = msg.upper()
 		return {
 			'CHANGE STATUS': self.toggle_status,
-			'GET STATUS': self.__get_status,
-			'REFRESH JOBS': self.refresh_jobs_on
+			'GET STATUS': self.get_status,
+			'REFRESH JOBS': self.refresh_jobs
 		}.get(msg, self.not_valid)
+
+	def stop(self):
+		self._sock.close()
+		# Should i call terminate?
 
 class ListenSocket:
 	
@@ -91,10 +69,16 @@ class ListenSocket:
 		clear_socket_path()
 		self._sock = socket.socket(
 			socket.AF_UNIX, socket.SOCK_STREAM)
-		self._sock.bind(SOCKET_PATH)
-		self._sock.listen(MAX_CLIENTS)
-		sp.call([CONFIGURE_SCRIPT])
+		self._sock.bind(config.SOCKET_PATH)
+		self._sock.listen(config.MAX_CLIENTS)
+		sp.call([config.CONFIGURE_SCRIPT])
 		self._conn = None
+		self.lock = Lock()
+
+	def alive(self):
+		with self.lock:
+			alive = False if self._sock is None else True
+		return alive
 
 	def wait(self):
 		logger.info('Waiting for connection...')
@@ -117,9 +101,11 @@ class ListenSocket:
 
 	def close(self):
 		self.disconnect()
-		if self._sock: 
-			self._sock.close()
-			self._sock = None
+		if self._sock:
+			with self.lock:
+				self._sock.shutdown(socket.SHUT_RDWR)
+				self._sock.close()
+				self._sock = None
 			clear_socket_path()
 
 	def __del__(self):
@@ -127,19 +113,19 @@ class ListenSocket:
 
 # Helper
 def clear_socket_path():
-	if not os.path.exists(SOCKET_FOLDER):
-		sp.call(['mkdir', '-p', SOCKET_FOLDER])
+	if not os.path.exists(config.SOCKET_FOLDER):
+		sp.call(['mkdir', '-p', config.SOCKET_FOLDER])
 	else:
 		try:
-			os.unlink(SOCKET_PATH)
+			os.unlink(config.SOCKET_PATH)
 		except OSError:
-			if os.path.exists(SOCKET_PATH):
+			if os.path.exists(config.SOCKET_PATH):
 				raise
 
 if __name__ == '__main__':
 
 	# Listener Test
-	logging.basicConfig(level=logging.DEBUG)
+	logging.basicConfig(format="%(message)s", level=logging.DEBUG)
 
 	test = SocketProcess()
 	test.start()
@@ -149,4 +135,4 @@ if __name__ == '__main__':
 	except:
 		test.stop()
 		test.join()
-		exit('\n- Finished main process')
+		exit('- Finished main process')

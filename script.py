@@ -77,6 +77,7 @@ def clean_zombies():
 	for x in xrange(len(running)):
 		p = running.pop(0)
 		if not p.is_alive():
+			vine.config.DIRTY_JOBS = 1
 			p.join()
 		else:
 			running.append(p)
@@ -93,13 +94,11 @@ def update_jobs():
 	if db.open():
 		jobs.refresh_jobs(db)
 	else:
-		if sp.need_refresh_jobs():
+		if vine.config.DIRTY_JOBS:
 			db.connect()
 			jobs.refresh_jobs(db)
 			db.close()
-			sp.refresh_jobs_off()
-
-STATUS = True
+			vine.config.DIRTY_JOBS = 0
 
 def debug():
 	logger.info('')
@@ -115,15 +114,14 @@ def main():
 		initialize()
 		while True:
 			old_time = time()
-			
 			debug()
 			# Main logic of the script
-			if STATUS: 
+			logger.debug("Status: %s", vine.config.SCRIPT_STATUS)
+			if vine.config.SCRIPT_STATUS: 
 				process_jobs()
-				
+
 			clean_zombies()
 			update_jobs()
-				
 			wait(old_time)
 	except KeyboardInterrupt:
 		logger.critical("\nGood bye")

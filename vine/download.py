@@ -3,7 +3,6 @@
 import logging
 import urllib
 import os
-from multiprocessing import Pool
 from functools import partial
 
 import config

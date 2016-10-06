@@ -3,6 +3,23 @@
 import os
 from collections import namedtuple
 
+# Control varibles
+
+SCRIPT_STATUS = 1
+DIRTY_JOBS = 0
+
+# Listener 
+
+CONFIGURE_SCRIPT =  '/home/oswald/Documents/Work'
+CONFIGURE_SCRIPT += '/Vine Scraper/script/configure.sh'
+
+SOCKET_FOLDER = '/tmp/SCRAPE'
+SOCKET_PATH = SOCKET_FOLDER + '/SCRAPE_SOCKET'
+
+MAX_CLIENTS = 1
+
+# Stopwords
+
 path = os.path.dirname(os.path.realpath(__file__))
 WORDS_DIR = path + "/stopwords/"
 
@@ -27,6 +44,7 @@ MAX_SCRAPE = 1
 MAX_COMBINE = 1
 
 # Video default settings
+# I will move this to the video module
 
 DEFAULT_SETTINGS = ("0", "1280:720", "720:720",
 	"(main_w/2-text_w/2)", "(main_h)-50",
