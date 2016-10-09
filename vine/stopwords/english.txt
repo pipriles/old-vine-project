@@ -95,7 +95,7 @@ or
 other
 ought
 our
-ours	
+ours
 ourselves
 out
 over
@@ -172,3 +172,11 @@ your
 yours
 yourself
 yourselves
+ib
+ac
+dt
+vt
+vc
+tc
+cc
+yt

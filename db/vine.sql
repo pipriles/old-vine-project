@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: localhost
--- Tiempo de generación: 16-09-2016 a las 00:12:29
--- Versión del servidor: 10.1.17-MariaDB
--- Versión de PHP: 7.0.10
+-- Tiempo de generación: 09-10-2016 a las 08:53:19
+-- Versión del servidor: 10.1.18-MariaDB
+-- Versión de PHP: 7.0.11
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
@@ -31,16 +31,9 @@ CREATE TABLE `account` (
   `access_token` varchar(255) NOT NULL,
   `token_type` varchar(30) NOT NULL,
   `token_expiry` varchar(30) NOT NULL,
-  `refresh_token` varchar(255) NOT NULL
+  `refresh_token` varchar(255) NOT NULL,
+  `name` varchar(50) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
---
--- Volcado de datos para la tabla `account`
---
-
-INSERT INTO `account` (`user`, `access_token`, `token_type`, `token_expiry`, `refresh_token`) VALUES
-('UC8FkzeFJVG2n09iyh0HdA9w', 'ya29.CjBXAxmVZqBC9ve47nVxKhsFTU4VAPxyLfL2OZgy0A03UFtqc29yX3BTC33Swht3TSE', 'Bearer', '2016-09-07T03:46:30Z', '1/LW2zRZfFwXscVP9v6xqWNF7n7EQILj5FespfPE00QfI'),
-('UCCeommZnGWoKHEbdymv_sJQ', 'ya29.Ci9WA1bOUkuptymPUXYFZUP9jxWcs5Ml7Kuks8OG8JjkHumdgAS7aIO6XqE0n2rVzw', 'Bearer', '2016-09-06T06:32:57Z', '1/D7FrKsy2KpqDSPGgAhcKZgEKQZEyrhD3ZASYGn4d6gg');
 
 -- --------------------------------------------------------
 
@@ -59,10 +52,10 @@ CREATE TABLE `job` (
   `combine_limit` int(11) UNSIGNED NOT NULL,
   `combine_interval` int(11) UNSIGNED NOT NULL COMMENT 'Should be in minutes',
   `next_combine` datetime NOT NULL,
-  `date_limit` int(11) UNSIGNED NOT NULL,
-  `status` char(3) NOT NULL,
-  `autoupload` tinyint(1) NOT NULL,
-  `formula` text NOT NULL COMMENT 'This should not be used'
+  `date_limit` int(11) UNSIGNED DEFAULT '0',
+  `status` char(3) NOT NULL DEFAULT '000',
+  `autoupload` tinyint(1) NOT NULL DEFAULT '0',
+  `formula` text COMMENT 'This should not be used'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Scrape Jobs';
 
 -- --------------------------------------------------------
@@ -140,7 +133,7 @@ CREATE TABLE `video` (
   `source` varchar(100) NOT NULL,
   `name` varchar(50) NOT NULL,
   `date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `status` tinyint(4) NOT NULL DEFAULT '0'
+  `status` char(2) NOT NULL DEFAULT '00'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------

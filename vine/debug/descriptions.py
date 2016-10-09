@@ -16,7 +16,11 @@ def main():
 	db = vine.database.Database()
 	db.connect()
 
-	sql = "SELECT title FROM vine WHERE 1"
+	parser = argparse.ArgumentParser(description="List descriptions from vine")
+	parser.add_argument('--limit', '-l', help="Limit of vines", required=True, default=20, type=int)
+	args = parser.parse_args()
+
+	sql = "SELECT title FROM vine WHERE 1 LIMIT {}".format(args.limit)
 	for x in db.query(sql):
 		print x[0].__repr__()
 

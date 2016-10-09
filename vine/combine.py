@@ -98,8 +98,8 @@ class VideosSpell:
 	def combine_videos(self):
 
 		if self.converted:
-			combine_videos(self.converted, self.name)
-			change_group(self.name)
+			combine_videos(self.converted, self.data._id)
+			change_group(self.data._id)
 		else:
 			logger.warning("Could not convert all the videos")
 
@@ -115,7 +115,7 @@ class VideosSpell:
 			# What should i put in the description?
 			# Maybe a settings for the privacy
 
-			file = config.video_path + '%s.mp4' % self.name
+			file = config.video_path + '%s.mp4' % self.data._id
 			description = None
 			category = 22
 			keywords = yt.gen_keywords(self.downloaded)

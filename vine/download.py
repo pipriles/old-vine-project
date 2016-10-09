@@ -25,9 +25,12 @@ def download_videos(videos):
 
 	return vids
 
-def retrieve_vid(site, url, title):
+def retrieve_vid(site, url, title, path=None):
+	if path is None:
+		path = config.video_path
+
 	logger.info("Downloading %s", title)
-	site.retrieve(url, config.video_path + title)
+	site.retrieve(url, path + title)
 
 # Test
 if __name__ == '__main__':
@@ -35,16 +38,9 @@ if __name__ == '__main__':
 	import argparse
 
 	parser = argparse.ArgumentParser(description="This module downloads the videos")
-	parser.add_argument("--id", default=0, help="Job identifier", metavar='')
-	parser.add_argument("--name", default="Test", help="Job name", metavar='')
-	parser.add_argument("-u", "--url", default="https://vine.co/popular-now", help="Job url", metavar='')
-	parser.add_argument("-s", "--combine-limit", default=3, help="Job combine limit (videos to be downloaded)", metavar='')
-	parser.add_argument("--date-limit", default=0, help="Job date limit for the videos", metavar='')
-
+	parser.add_argument("-u", "--url", help="Url of video to be downloaded", required=True)
+	parser.add_argument("-n", "--name", help="Name of the video", default="sample.mp4", metavar='')
+	parser.add_argument("-p", "--path", help="Download path", required=True)
 	args = parser.parse_args()
 
-	print args.id
-	print args.name
-	print args.url
-	print args.combine_limit
-	print args.date_limit
+	retrieve_vid(urllib.URLopener(), args.url, args.name, args.path)
