@@ -219,6 +219,7 @@ def fix_description(description):
 
 	return description
 
+# I should change this
 def change_group(name):
 	command = ['chgrp', config.WEB_GROUP, config.video_path + '%s.mp4' % name]
 	call(command)
