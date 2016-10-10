@@ -25,14 +25,6 @@ logger = logging.getLogger(__name__)
 
 # Move this to the config module
 
-CLIENT_ID = "892925157774-u9l5kehvb7fgnqnb86rdoj0a3ek6ktd0.apps.googleusercontent.com"
-CLIENT_SECRET = "k52sVi1FQCr4rj-NOICvSDDZ"
-TOKEN_URI = "https://accounts.google.com/o/oauth2/token"
-
-YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube"
-YOUTUBE_API_NAME = "youtube"
-YOUTUBE_API_VERSION = "v3"
-
 PRIVACY_STATUS = ("public", "private", "unlisted")
 
 fields  = "user "
@@ -144,8 +136,8 @@ class YouTubeData:
 		refresh_token = token[4]
 		token_expiry = dt.datetime.strptime(token[3], EXPIRY_FORMAT)
 
-		return (access_token, CLIENT_ID, CLIENT_SECRET,
-			refresh_token, token_expiry, TOKEN_URI, None,)
+		return (access_token, config.CLIENT_ID, config.CLIENT_SECRET,
+			refresh_token, token_expiry, config.TOKEN_URI, None,)
 
 	def update_credentials(self, creds):
 
@@ -199,7 +191,7 @@ def get_authenticated_service(data):
 		credentials.refresh(http)
 		data.update_credentials(credentials)
 
-	return build(YOUTUBE_API_NAME, YOUTUBE_API_VERSION,
+	return build(config.YOUTUBE_API_NAME, config.YOUTUBE_API_VERSION,
 		credentials=credentials)
 
 

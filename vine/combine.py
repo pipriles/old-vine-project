@@ -15,8 +15,6 @@ import youtube as yt
 from database import Database
 from video import VideoData, VineVideo
 
-DT_FORMAT = "%Y-%m-%d_%H:%M:%S"
-
 logger = logging.getLogger(__name__)
 
 class CombineProcess(Process):
@@ -63,7 +61,7 @@ class VideosSpell:
 		self.downloaded = []
 		self.converted = []
 
-		now = dt.datetime.now().strftime(DT_FORMAT)
+		now = dt.datetime.now().strftime(config.DT_FORMAT)
 		self.name = str(self.data.job._id) + "_" + now
 
 	def download_videos(self):

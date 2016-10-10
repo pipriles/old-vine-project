@@ -4,8 +4,8 @@
 # them and make the script change its flow
 
 import os
+import errno
 import socket
-import subprocess as sp
 import logging
 import time
 import config
@@ -71,7 +71,7 @@ class ListenSocket:
 			socket.AF_UNIX, socket.SOCK_STREAM)
 		self._sock.bind(config.SOCKET_PATH)
 		self._sock.listen(config.MAX_CLIENTS)
-		sp.call([config.CONFIGURE_SCRIPT])
+		os.chmod(config.SOCKET_PATH, 0o0777)
 		self._conn = None
 		self.lock = Lock()
 
@@ -111,16 +111,20 @@ class ListenSocket:
 	def __del__(self):
 		self.close()
 
-# Helper
+# Helpers
 def clear_socket_path():
 	if not os.path.exists(config.SOCKET_FOLDER):
-		sp.call(['mkdir', '-p', config.SOCKET_FOLDER])
+		os.makedirs(config.SOCKET_FOLDER)
+		os.chmod(config.SOCKET_FOLDER, 0o0777)
 	else:
-		try:
-			os.unlink(config.SOCKET_PATH)
-		except OSError:
-			if os.path.exists(config.SOCKET_PATH):
-				raise
+		unlink(config.SOCKET_PATH)
+
+def unlink(path):
+	try:
+		os.remove(path)
+	except OSError as e:
+		if e.errno != errno.ENOENT:
+			raise
 
 if __name__ == '__main__':
 

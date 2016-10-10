@@ -6,16 +6,11 @@
 import datetime as dt
 import config
 
-DT_FORMAT = "%Y-%m-%d %H:%M:%S"
-
-def to_datetime(t, format=DT_FORMAT):
+def to_datetime(t, format=config.DT_FORMAT):
 	return dt.datetime.strptime(t, format)
 
-def to_string(t, format=DT_FORMAT):
+def to_string(t, format=config.DT_FORMAT):
 	return t.strftime(format)
-
-config.MAX_SCRAPE = 1
-config.MAX_COMBINE = 1
 
 class VineJobs:
 	
