@@ -7,9 +7,13 @@ import datetime as dt
 import config
 
 def to_datetime(t, format=config.DT_FORMAT):
+	if t is None:
+		t = dt.datetime.now().strftime(format)
 	return dt.datetime.strptime(t, format)
 
 def to_string(t, format=config.DT_FORMAT):
+	if t is None:
+		t = dt.datetime.now()
 	return t.strftime(format)
 
 class VineJobs:
