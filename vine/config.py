@@ -1,5 +1,12 @@
 #!/usr/bin/env python2
 
+# Configuration module of the vine scraper
+
+# Notes:
+# - Change the client_id and the client_secret
+# - Change the web group 
+# - Change the video, image and font path
+
 import os
 from collections import namedtuple
 
@@ -60,7 +67,7 @@ DT_FORMAT = "%Y-%m-%d %H:%M:%S"
 DEFAULT_SETTINGS = ("0", "1280:720", "720:720",
 	"(main_w/2-text_w/2)", "(main_h)-50",
 	"Text here please", "26", "black@1", "white@0.7", 
-	"SuperFont.ttf", "Vine_Numbers.jpg")
+	"default.ttf", "default.jpg")
 
 # Settings struct
 

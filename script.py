@@ -131,19 +131,13 @@ def main():
 def set_from_args(args):
 	vine.config.sleep_time = args.sleep_time
 	vine.config.ffmpeg_bin = args.ffmpeg_bin
-	vine.config.video_path = args.video_path
-	vine.config.image_path = args.image_path
-	vine.config.font_path = args.font_path
-
+	
 if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser(description="Here is where the magic happens")
 	parser.add_argument("--sleep-time", default=1, type=int, help="Sleep time interval", metavar='')
 	parser.add_argument("--log-level", default="WARNING", help="Filter log messages", metavar='')
 	parser.add_argument("--real-time", default=False, type=bool, help="Update jobs every second, (Just for debug)", metavar='')
-	parser.add_argument("--video-path", default="./res/videos/", help="Path of the video folder", metavar='')
-	parser.add_argument("--image-path", default="./res/images/", help="Path of the image folder", metavar='')
-	parser.add_argument("--font-path", default="./res/fonts/", help="Path of the fonts folder", metavar='')
 	parser.add_argument("--ffmpeg-bin", default="ffmpeg", help="ffmpeg command to be called", metavar='')
 
 	args = parser.parse_args()
