@@ -95,7 +95,7 @@ def gen_keywords(vids):
 
 	ret = sorted(tags, key=lambda x: (tags[x], len(x)), reverse=True)
 	for x in ret:
-		logger.debug("{0}".format(key, value))
+		logger.debug("{0}".format(x))
 
 	return ret
 
