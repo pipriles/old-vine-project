@@ -77,7 +77,9 @@ def make_title(title, job):
 def gen_keywords(vids):
 	
 	tags = {}
-	regex = re.compile(r'\w{3,}')
+	regex_1 = re.compile(r'\w{3,}')
+	regex_2 = re.compile(r'[^\w\s]')
+	regex_3 = re.compile(r'\s{2,}')
 	stop_words = _get_stop_words("english")
 
 	for vid in vids:
@@ -85,12 +87,14 @@ def gen_keywords(vids):
 		user = user.encode('ascii', 'ignore')
 		description = unicodedata.normalize('NFD', vid.description)
 		description = description.encode('ascii', 'ignore')
-		data = regex.findall(description)
+		data = regex_1.findall(description)
 		data = [x.lower() for x in data]
 		for word in data:
 			if word not in stop_words:
 				_add_tag(tags, word)
 
+		user = regex_2.sub(' ', user)
+		user = regex_3.sub(' ', user)
 		_add_tag(tags, user.lower())
 
 	ret = sorted(tags, key=lambda x: (tags[x], len(x)), reverse=True)
