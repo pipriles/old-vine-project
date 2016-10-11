@@ -243,11 +243,7 @@ def init_upload(youtube, opt):
 	}
 
 	try:
-		upload_request = youtube.videos().insert(
-			part=",".join(body.keys()),
-			body=body,
-			media_body=MediaFileUpload(opt.file, chunksize=-1, resumable=True)
-		)
+		media_file = MediaFileUpload(opt.file, chunksize=-1, resumable=True)
 	except IOError:
 		exit("You lied to me!")
 
@@ -255,6 +251,11 @@ def init_upload(youtube, opt):
 	while loop:
 		loop = False
 		try:
+			# I have to elaborate the request again
+			upload_request = youtube.videos().insert(
+				part=",".join(body.keys()),
+				body=body,
+				media_body=media_file)
 			upload_video(upload_request)
 		except HttpError, e:
 			if e.resp.status == 400:
