@@ -258,7 +258,8 @@ def init_upload(youtube, opt):
 			upload_video(upload_request)
 		except HttpError, e:
 			if e.resp.status == 400:
-				del tags[-1]
+				if len(body['snippet']['tags']) != 0:
+					del body['snippet']['tags'][-1]
 				loop = True
 			else:
 				raise e
