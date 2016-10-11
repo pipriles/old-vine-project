@@ -223,7 +223,7 @@ def init_upload(youtube, opt):
 		acum = 0
 		for x in opt.keywords:
 			acum += len(x)
-			if acum < 490:
+			if acum + len(tags) < 500:
 				tags.append(x)
 			else:
 				break
