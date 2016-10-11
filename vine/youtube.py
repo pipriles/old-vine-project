@@ -88,14 +88,14 @@ def gen_keywords(vids):
 		description = unicodedata.normalize('NFD', vid.description)
 		description = description.encode('ascii', 'ignore')
 		data = regex_1.findall(description)
-		data = [x.lower() for x in data]
+		data = [x[:30].lower() for x in data]
 		for word in data:
 			if word not in stop_words:
 				_add_tag(tags, word)
 
 		user = regex_2.sub(' ', user)
 		user = regex_3.sub(' ', user)
-		_add_tag(tags, user.lower())
+		_add_tag(tags, user[:30].lower())
 
 	ret = sorted(tags, key=lambda x: (tags[x], len(x)), reverse=True)
 	for x in ret:
@@ -217,7 +217,7 @@ def init_upload(youtube, opt):
 	"""
 
 	if isinstance(opt.keywords, basestring):
-		tags = opt.keywords[:490].split(",")
+		tags = opt.keywords[:500].split(",")
 	else:
 		tags = []
 		acum = 0
@@ -249,6 +249,19 @@ def init_upload(youtube, opt):
 		)
 	except IOError:
 		exit("You lied to me!")
+
+	loop = True
+	while loop:
+		loop = False
+		try:
+			upload_video(upload_request)
+		except HttpError, e:
+			if e.resp.status == 400:
+				del tags[-1]
+				loop = True
+			else:
+				raise e
+
 
 	return upload_video(upload_request)
 
