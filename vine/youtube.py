@@ -223,10 +223,11 @@ def init_upload(youtube, opt):
 		acum = 0
 		for x in opt.keywords:
 			acum += len(x)
-			if acum < 500:
+			if acum < 490:
 				tags.append(x)
 			else:
 				break
+		logger.debug(tags)
 
 	body = {
 		'snippet': {

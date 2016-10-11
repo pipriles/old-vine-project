@@ -127,9 +127,10 @@ class VideosSpell:
 
 				# Upload the video
 				url = yt.upload_from_args(args, self.data.db)
-
-				# Here we should link to an account
-				self.data.link_account(user, title, url)
+				
+				if url is not None:
+					# Here we should link to an account
+					self.data.link_account(user, title, url)
 
 	def clean_videos(self):
 
