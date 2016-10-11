@@ -212,13 +212,21 @@ def init_upload(youtube, opt):
 	Args:
 		youtube: An authenticated youtube service
 		opt: The options for the video
-
+	Notes:
+		The keywords request should be 500 bytes long
 	"""
 
 	if isinstance(opt.keywords, basestring):
-		tags = opt.keywords.split(",")
+		tags = opt.keywords[:490].split(",")
 	else:
-		tags = opt.keywords
+		tags = []
+		acum = 0
+		for x in opt.keywords:
+			acum += len(x)
+			if acum < 500:
+				tags.append(x)
+			else:
+				break
 
 	body = {
 		'snippet': {
