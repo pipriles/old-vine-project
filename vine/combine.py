@@ -114,9 +114,10 @@ class VideosSpell:
 			# Maybe a settings for the privacy
 
 			file = config.video_path + '%s.mp4' % self.data._id
-			description = None
-			category = 22
 			keywords = yt.gen_keywords(self.downloaded)
+			description  = "TAGS: "
+			description += ', '.join(keywords)
+			category = 22
 			privacyStatus = yt.PRIVACY_STATUS[0]
 
 			for x in accounts:
@@ -127,7 +128,7 @@ class VideosSpell:
 
 				# Upload the video
 				url = yt.upload_from_args(args, self.data.db)
-				
+
 				if url is not None:
 					# Here we should link to an account
 					self.data.link_account(user, title, url)

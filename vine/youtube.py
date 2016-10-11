@@ -214,6 +214,7 @@ def init_upload(youtube, opt):
 		opt: The options for the video
 	Notes:
 		The keywords request should be 500 bytes long
+		Description max length is 4500
 	"""
 
 	if isinstance(opt.keywords, basestring):
@@ -232,7 +233,7 @@ def init_upload(youtube, opt):
 	body = {
 		'snippet': {
 			'title': opt.title,
-			'description': opt.description,
+			'description': opt.description[:4500],
 			'tags': tags,
 			'categoryId': opt.category
 		},
