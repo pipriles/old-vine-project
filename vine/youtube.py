@@ -265,7 +265,6 @@ def init_upload(youtube, opt):
 			else:
 				raise e
 
-
 	return upload_video(upload_request)
 
 def upload_video(request):
