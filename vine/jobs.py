@@ -5,6 +5,7 @@
 
 import datetime as dt
 import config
+import video
 
 def to_datetime(t, format=config.DT_FORMAT):
 	if t is None:
@@ -98,8 +99,8 @@ class JobData:
 		dbc = db.query(sql, (self._id,))
 		return dbc.fetchall()
 
-	def get_settings(self, db):
-		return config.get_settings(self.settings_id, db)
+	def fetch_conf(self, db):
+		return video.fetch_conf(self.settings_id, db)
 
 	def scrape_time(self):
 		present = dt.datetime.now()

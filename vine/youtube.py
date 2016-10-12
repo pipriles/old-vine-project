@@ -69,7 +69,7 @@ def make_title(title, job):
 			'[I_SECONDS]': 	int(job.combine_interval * 60)
 		}.get(var, var))
 
-	words = re.split(r'(\[[\w]+\])', title)
+	words = re.split(r'(\[\w+\])', title)
 	new = ''.join(map(_interpret, words))
 
 	return dt.datetime.now().strftime(new)

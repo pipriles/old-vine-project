@@ -1,5 +1,8 @@
 #!/usr/bin/env python2
 
+# I have to add reconvert support to 
+# randomize the video combination
+
 import logging
 import datetime as dt
 import re
@@ -12,8 +15,8 @@ from multiprocessing import Process, Pool
 import config
 import download as dl
 import youtube as yt
+import video 
 from database import Database
-from video import VideoData, VineVideo
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +29,11 @@ class CombineProcess(Process):
 		
 		self.db = Database()
 		self.db.connect()
-		
-		self.data = VideoData(self.db, self.job)
+
 		self.job.start_combine(self.db)
 
 	def run(self):
-		cast = VideosSpell(self.data)
+		cast = VideosSpell(self.db, self.job)
 		try:
 			# Combine all the videos
 			cast.download_videos()
@@ -56,17 +58,14 @@ class CombineProcess(Process):
 
 class VideosSpell:
 
-	def __init__(self, vd):
-		self.data = vd
+	def __init__(self, db, job):
+		self.vid = VideoData(db, job)
 		self.downloaded = []
 		self.converted = []
 
-		now = dt.datetime.now().strftime(config.DT_FORMAT)
-		self.name = str(self.data.job._id) + "_" + now
-
 	def download_videos(self):
 
-		top = self.data.get_top_videos()
+		top = video.get_top_videos(self.vid.db, self.vid.job)
 
 		# I should check if the videos
 		# already exists
@@ -78,42 +77,43 @@ class VideosSpell:
 
 	def convert_videos(self):
 
-		conf = self.data.get_settings()
+		conf = self.vid.get_settings()
 		
 		# Here we should create the video
-		self.data.create_video(self.name)
+		self.vid.create_video()
 
 		position = 0
 		for vid in self.downloaded:
 			ret = convert_video(vid, conf)
 			if ret:
-				self.data.set_as_used(vid.id)
+				self.vid.set_as_used(vid.id)
 				# Here we should link with the video
-				self.data.link_vine(vid.id, position)
+				# I have to move this to make it more flexible
+				self.vid.link_vine(vid.id, position)
 				self.converted.append(ret)
 				position += 1
 
 	def combine_videos(self):
 
 		if self.converted:
-			combine_videos(self.converted, self.data._id)
-			change_group(self.data._id)
+			combine_videos(self.converted, self.vid._id)
+			change_group(self.vid._id)
 		else:
 			logger.warning("Could not convert all the videos")
 
 	def upload_video(self):
 
-		logger.debug(self.data.job.autoupload)
+		logger.debug(self.vid.job.autoupload)
 
-		if self.data.job.autoupload:
+		if self.vid.job.autoupload:
 
-			accounts = self.data.get_accounts()
+			accounts = self.vid.get_accounts()
 			logger.debug(accounts)
 
 			# What should i put in the description?
 			# Maybe a settings for the privacy
 
-			file = config.video_path + '%s.mp4' % self.data._id
+			file = config.video_path + '%s.mp4' % self.vid._id
 			keywords = yt.gen_keywords(self.downloaded)
 			description  = "TAGS: "
 			description += ', '.join(keywords)
@@ -122,16 +122,16 @@ class VideosSpell:
 
 			for x in accounts:
 				user = x[0]
-				title = yt.make_title(x[1], self.data.job)
+				title = yt.make_title(x[1], self.vid.job)
 				args = yt.UploadVideo(user, file, title, 
 					description, category, keywords, privacyStatus)
 
 				# Upload the video
-				url = yt.upload_from_args(args, self.data.db)
+				url = yt.upload_from_args(args, self.vid.db)
 
 				if url is not None:
 					# Here we should link to an account
-					self.data.link_account(user, title, url)
+					self.vid.link_account(user, title, url)
 
 	def clean_videos(self):
 

@@ -23,7 +23,7 @@ class Database:
 	database you have to call the method connect
 	
 	"""
-
+	
 	def __init__(self, host='localhost', user='vine_app', 
 			password='supervine', db='vine'):
 

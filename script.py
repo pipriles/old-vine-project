@@ -40,7 +40,7 @@ def initialize():
 def end_with_this():
 	sp.stop()
 	sp.join()
-	for p in running: 
+	for p in running:
 		p.join()
 	db.close()
 
@@ -117,7 +117,7 @@ def main():
 			debug()
 			# Main logic of the script
 			logger.debug("Status: %s", vine.config.SCRIPT_STATUS)
-			if vine.config.SCRIPT_STATUS: 
+			if vine.config.SCRIPT_STATUS:
 				process_jobs()
 
 			clean_zombies()
@@ -131,7 +131,7 @@ def main():
 def set_from_args(args):
 	vine.config.sleep_time = args.sleep_time
 	vine.config.ffmpeg_bin = args.ffmpeg_bin
-	
+
 if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser(description="Here is where the magic happens")
