@@ -3,6 +3,7 @@
 # This module provides an interface
 # to interact with job related data
 
+import re
 import datetime as dt
 import config
 import video
@@ -99,6 +100,76 @@ class JobData:
 		dbc = db.query(sql, (self._id,))
 		return dbc.fetchall()
 
+
+	def interpret(self, text, func=None):
+
+		if func is None:
+			func = lambda x: x
+
+		def _parse_count():
+			if self.combine_limit:
+				return self.combine_limit
+			else:
+				return ''
+
+		def _parse_dr(format='s'):
+			if self.combine_limit:
+				return {
+					'h': int(self.combine_limit * 0.0016666),
+					'm': int(self.combine_limit * 0.1),
+					's': int(self.combine_limit * 6)
+				}.get(format, '')
+			else:
+				return ''
+
+		def _parse_ci(format='m'):
+			if self.combine_interval:
+				return {
+					'd': int(self.combine_interval / 1440),
+					'h': int(self.combine_interval / 60),
+					'm': int(self.combine_interval),
+					's': int(self.combine_interval * 60)
+				}.get(format, '')
+			else:
+				return ''
+
+		def _parse_dl(format='d'):
+			if self.date_limit:
+				return {
+					'd': int(self.date_limit),
+					'h': int(self.date_limit * 24),
+					'm': int(self.date_limit * 1440),
+					's': int(self.date_limit * 86400)
+				}.get(format, '')
+			else:
+				return ''
+
+		def _parser(key):
+
+			# NOTE THAT IF DATE_LIMIT CAN BE NONE IT WILL CRASH
+			# This function are very ugly here i will change this
+
+			return str({
+				'[COUNT]':		_parse_count(),
+				'[D_HOUR]':		_parse_dr('h'),
+				'[D_MINUTES]':	_parse_dr('m'),
+				'[D_SECONDS]':	_parse_dr('s'),
+				'[I_DAYS]':		_parse_ci('d'),
+				'[I_HOURS]':	_parse_ci('h'),
+				'[I_MINUTES]':	_parse_ci('m'),
+				'[I_SECONDS]': 	_parse_ci('s'),
+				'[L_DAYS]':		_parse_dl('d'),
+				'[L_HOURS]':	_parse_dl('h'),
+				'[L_MINUTES]':	_parse_dl('m'),
+				'[L_SECONDS]':	_parse_dl('s')
+			}.get(key, func(key)))
+
+		keys = re.split(r'(\[[^\[\]]+\])', text)
+		new_title = ''.join(map(_parser, keys))
+		return dt.datetime.now().strftime(new_title)
+
+	###
+	
 	def fetch_conf(self, db):
 		return video.fetch_conf(self.settings_id, db)
 

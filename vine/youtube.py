@@ -37,6 +37,38 @@ fields += "privacyStatus"
 
 UploadVideo = namedtuple("UploadVideo", fields)
 
+def make_description(description, job):
+
+	""" Generate a YouTube video description
+
+	%A  - Author
+	%D  - Description
+	%P  - Position
+	%tP - Time postion
+	%ID - Identifier
+
+	[INFO="%A %D %P %tP %ID"]
+	
+	"""
+
+	def _formatter(var, vid):
+		return {
+			'%A': vid.user,
+			'%D': vid.description,
+			'%P': num,
+			'%tP': num * 6,
+			'%ID': vid.id,
+		}
+
+	words = re.split(r'(\[\w+\])', title)
+	words = map(_interpret, words)
+
+	for x in words:
+		match = re.search(r'\[INFO=?\'|\"(.*)\'|\"\]', x)
+		if match:
+			style = match.group(0)
+
+
 def make_title(title, job):
 	
 	""" Generate a YouTube video title
@@ -247,25 +279,26 @@ def init_upload(youtube, opt):
 	except IOError:
 		exit("You lied to me!")
 
+	url = None
 	loop = True
 	while loop:
-		loop = False
 		try:
 			# I have to elaborate the request again
 			upload_request = youtube.videos().insert(
 				part=",".join(body.keys()),
 				body=body,
 				media_body=media_file)
-			upload_video(upload_request)
+			url = upload_video(upload_request)
+			loop = False
 		except HttpError, e:
 			if e.resp.status == 400:
 				if len(body['snippet']['tags']) != 0:
 					del body['snippet']['tags'][-1]
-				loop = True
 			else:
+				#loop = False
 				raise e
 
-	return upload_video(upload_request)
+	return url
 
 def upload_video(request):
 	

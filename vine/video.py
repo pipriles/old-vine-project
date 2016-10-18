@@ -1,9 +1,11 @@
 #!/usr/bin/env python2
 
+import re
 import datetime as dt
 
 from collections import namedtuple
 
+import util
 import config
 import youtube as yt
 
@@ -53,10 +55,11 @@ class VideoData:
 		name=None, date=None, status=None, job=None):
 
 		self.db = db
+		self.job = job
+		self.id = vid
 
 		# If we pass just the video
 		if job is None:
-			self.id = vid
 			self.conf_id = conf_id
 			self.source = source
 			self.date = date
@@ -64,7 +67,6 @@ class VideoData:
 
 		# If we pass just the job
 		else:
-			self.job = job
 			self.conf_id = job.settings_id
 			self.source = job.url
 			self.date = dt.datetime.now().strftime(config.DT_FORMAT)
@@ -73,7 +75,6 @@ class VideoData:
 	def create_video(self):
 
 		if self.id is None:
-
 			sql  = "INSERT INTO video (`settingsID`, `source`, `name`, `date`, `status`) "
 			sql += "VALUES (%s, %s, %s, %s, '00')"
 
@@ -83,19 +84,19 @@ class VideoData:
 			self.id = dbc.lastrowid
 			self.status = '00'
 
-	def set_status(self, combined=False, uploaded=False):
-		
-		combine = 1 if combined else 0
-		upload  = 1 if uploaded else 0
-		new_status = '{}{}'.format(combine, upload)
-		_change_status(new_status)
-
 	def _change_status(self, new_status):
 
 		sql = "UPDATE video SET status = %s WHERE id = %s"
 		self.db.query(sql, (new_status, self.id))
 
 		self.status = new_status
+
+	def set_status(self, combined=False, uploaded=False):
+		
+		combine = 1 if combined else 0
+		upload  = 1 if uploaded else 0
+		new_status = '{}{}'.format(combine, upload)
+		_change_status(new_status)
 
 	def link_vine(self, vine, position):
 
@@ -142,12 +143,76 @@ class VideoData:
 
 	def set_as_used(self, vine):
 		
-		sql  = "UPDATE vine_job SET used = 1 "
-		sql += "WHERE vine_job.jobID = %s"
-		sql += " AND vine_job.vineID = %s"
+		if self.job:
+			sql  = "UPDATE vine_job SET used = 1 "
+			sql += "WHERE vine_job.jobID = %s"
+			sql += " AND vine_job.vineID = %s"
 
-		self.db.query(sql, (self.job._id, vine))
+			self.db.query(sql, (self.job._id, vine))
 
+	def make_title(self, text):
+
+		""" Generate a YouTube video title
+			
+		This function uses a list of names to generate
+		a title for a YouTube video
+
+		Returns:
+			The video title as a string
+		
+		Notes:
+			This function also uses the datetime 
+			formatting to give the current date
+		"""
+
+		if self.job:
+			return self.job.interpret(text)
+		else:
+			return text
+
+	def make_description(self, text, vines):
+
+		""" Generate a YouTube video description
+
+		{user}: Author
+		{description}: Description
+		{position}: Position
+		{time}: Time postion
+		{id}: Identifier
+
+		[VINES="FORMAT"]
+		
+		"""
+
+		def _vine_dict(vid):
+			formatter = {
+				'user': vid.user,
+				'description': vid.description,
+				'position': _vine_dict.pos,
+				'time': _vine_dict.pos * 6,
+				'id': vid.id,
+			}
+			_vine_dict.pos += 1
+			return formatter
+
+		_vine_dict.pos = 0
+
+		def print_vines(key):
+			pattern = r'\[VINES(?:=|\s)(?:\'|\")(.*)(?:\'|\")\]'
+			match = re.search(pattern, key)
+			if match:
+				style = match.group(1)
+				infos = [util.format(style, **_vine_dict(vid)) for vid in vines]
+				infos.insert(0, '')
+				infos.insert(len(infos)+1, '')
+				return '\n'.join(infos)
+			else:
+				return key
+
+		if self.job:
+			return self.job.interpret(text, print_vines)
+		else:
+			return text
 
 # Kind of ugly
 def get_top_videos(self, db, job):
