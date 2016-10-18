@@ -37,77 +37,10 @@ fields += "privacyStatus"
 
 UploadVideo = namedtuple("UploadVideo", fields)
 
-def make_description(description, job):
-
-	""" Generate a YouTube video description
-
-	%A  - Author
-	%D  - Description
-	%P  - Position
-	%tP - Time postion
-	%ID - Identifier
-
-	[INFO="%A %D %P %tP %ID"]
-	
-	"""
-
-	def _formatter(var, vid):
-		return {
-			'%A': vid.user,
-			'%D': vid.description,
-			'%P': num,
-			'%tP': num * 6,
-			'%ID': vid.id,
-		}
-
-	words = re.split(r'(\[\w+\])', title)
-	words = map(_interpret, words)
-
-	for x in words:
-		match = re.search(r'\[INFO=?\'|\"(.*)\'|\"\]', x)
-		if match:
-			style = match.group(0)
-
-
-def make_title(title, job):
-	
-	""" Generate a YouTube video title
-		
-	This function uses a list of names to generate
-	a title for a YouTube video
-
-	Returns:
-		The video title as a string
-	
-	Notes:
-		This function also uses the datetime 
-		formatting to give the current date
-	"""
-
-	def _interpret(var):
-
-		return str({
-			'[COUNT]':		job.combine_limit,
-			'[D_HOUR]':		int(job.combine_limit * 0.0016666),
-			'[D_MINUTES]':	int(job.combine_limit * 0.1),
-			'[D_SECONDS]':	6 * job.combine_limit,
-			'[L_DAYS]':		job.date_limit,
-			'[L_HOURS]':	int(job.date_limit * 24),
-			'[L_MINUTES]':	int(job.date_limit * 1440),
-			'[L_SECONDS]':	int(job.date_limit * 86400),
-			'[I_DAYS]':		int(job.combine_interval / 1440),
-			'[I_HOURS]':	int(job.combine_interval / 60),
-			'[I_MINUTES]':	job.combine_interval,
-			'[I_SECONDS]': 	int(job.combine_interval * 60)
-		}.get(var, var))
-
-	words = re.split(r'(\[\w+\])', title)
-	new = ''.join(map(_interpret, words))
-
-	return dt.datetime.now().strftime(new)
-
 def gen_keywords(vids):
-	
+		
+	# Should i move this to the video module?
+
 	tags = {}
 	regex_1 = re.compile(r'\w{3,}')
 	regex_2 = re.compile(r'[^\w\s]')
@@ -295,7 +228,8 @@ def init_upload(youtube, opt):
 				if len(body['snippet']['tags']) != 0:
 					del body['snippet']['tags'][-1]
 			else:
-				#loop = False
+				# Should just log as warning not raise
+				loop = False
 				raise e
 
 	return url
