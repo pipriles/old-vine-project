@@ -52,7 +52,7 @@ class VideoData:
 	# I will change this in the future
 
 	def __init__(self, db, vid=None, conf_id=None, source=None, 
-		name=None, date=None, status=None, job=None):
+		name=None, date=None, job=None):
 
 		self.db = db
 		self.job = job
@@ -82,21 +82,14 @@ class VideoData:
 			dbc = self.db.query(sql, args)
 			
 			self.id = dbc.lastrowid
-			self.status = '00'
+			self.status = False
 
-	def _change_status(self, new_status):
+	def set_status(self, combined=False):
 
 		sql = "UPDATE video SET status = %s WHERE id = %s"
-		self.db.query(sql, (new_status, self.id))
+		self.db.query(sql, (combined, self.id))
 
-		self.status = new_status
-
-	def set_status(self, combined=False, uploaded=False):
-		
-		combine = 1 if combined else 0
-		upload  = 1 if uploaded else 0
-		new_status = '{}{}'.format(combine, upload)
-		_change_status(new_status)
+		self.status = combined
 
 	def link_vine(self, vine, position):
 
@@ -106,18 +99,14 @@ class VideoData:
 		args = (vine, self.id, position)
 		self.db.query(sql, args)
 
-	def link_account(self, account, title, url, description=None, 
-		keywords=None, category=None, lang='EN'):
+	def link_account(self, account, title, url, lang='EN'):
 
 		sql  = "INSERT INTO video_account ("
-		sql += " videoID, accountID,"
-		sql += " title, description,"
-		sql += " keywords, category,"
-		sql += " url, language )"
-		sql += "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+		sql += " url, videoID, accountID,"
+		sql += " title, language )"
+		sql += "VALUES (%s, %s, %s, %s, %s)"
 
-		args = (self.id, account, title, description, 
-			keywords, category, url, lang)
+		args = (url, self.id, account, title, lang)
 
 		self.db.query(sql, args)
 
@@ -126,12 +115,9 @@ class VideoData:
 		# Notice that the configuration
 		# should not be set manually
 
-		if hasattr(self, '_conf'):
-			return self._conf
-		else:
+		if not hasattr(self, '_conf'):
 			self._conf = fetch_conf(self.conf_id, self.db)
 
-		self._conf = conf
 		return self._conf
 
 	def get_accounts(self):
@@ -204,7 +190,7 @@ class VideoData:
 				style = match.group(1)
 				infos = [util.format(style, **_vine_dict(vid)) for vid in vines]
 				infos.insert(0, '')
-				infos.insert(len(infos)+1, '')
+				infos.append('')
 				return '\n'.join(infos)
 			else:
 				return key
@@ -215,7 +201,7 @@ class VideoData:
 			return text
 
 # Kind of ugly
-def get_top_videos(self, db, job):
+def get_top_videos(db, job):
 	
 	# Look for videos not combined
 

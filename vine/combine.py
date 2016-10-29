@@ -59,7 +59,7 @@ class CombineProcess(Process):
 class VideosSpell:
 
 	def __init__(self, db, job):
-		self.vid = VideoData(db, job)
+		self.vid = video.VideoData(db, job=job)
 		self.downloaded = []
 		self.converted = []
 
@@ -77,27 +77,28 @@ class VideosSpell:
 
 	def convert_videos(self):
 
-		conf = self.vid.get_settings()
+		conf = self.vid.conf
 		
 		# Here we should create the video
 		self.vid.create_video()
 
 		position = 0
-		for vid in self.downloaded:
-			ret = convert_video(vid, conf)
+		for vine in self.downloaded:
+			ret = convert_video(vine, conf)
 			if ret:
-				self.vid.set_as_used(vid.id)
+				self.vid.set_as_used(vine.id)
 				# Here we should link with the video
 				# I have to move this to make it more flexible
-				self.vid.link_vine(vid.id, position)
+				self.vid.link_vine(vine.id, position)
 				self.converted.append(ret)
 				position += 1
 
 	def combine_videos(self):
 
 		if self.converted:
-			combine_videos(self.converted, self.vid._id)
-			change_group(self.vid._id)
+			combine_videos(self.converted, self.vid.id)
+			self.vid.set_status(combined=True)
+			change_group(self.vid.id)
 		else:
 			logger.warning("Could not convert all the videos")
 
@@ -113,7 +114,7 @@ class VideosSpell:
 			# What should i put in the description?
 			# Maybe a settings for the privacy
 
-			file = config.video_path + '%s.mp4' % self.vid._id
+			file = config.video_path + '%s.mp4' % self.vid.id
 			keywords = yt.gen_keywords(self.downloaded)
 			description  = "TAGS: "
 			description += ', '.join(keywords)

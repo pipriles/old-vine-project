@@ -10,6 +10,13 @@
 import os
 from collections import namedtuple
 
+# Database
+
+DB = 'vine'
+HOST = 'localhost'
+USER = 'vine_app'
+PASS = 'supervine'
+
 # Control varibles
 
 SCRIPT_STATUS = 1

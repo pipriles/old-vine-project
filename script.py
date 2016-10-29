@@ -33,10 +33,9 @@ def initialize():
 	if db.open():
 		jobs.init_jobs(db)
 	else:
-		db.connect()
-		jobs.init_jobs(db)
-		db.close()
-
+		with db: 
+			jobs.init_jobs(db)
+		
 def end_with_this():
 	sp.stop()
 	sp.join()
@@ -95,9 +94,8 @@ def update_jobs():
 		jobs.refresh_jobs(db)
 	else:
 		if vine.config.DIRTY_JOBS:
-			db.connect()
-			jobs.refresh_jobs(db)
-			db.close()
+			with db:
+				jobs.refresh_jobs(db)
 			vine.config.DIRTY_JOBS = 0
 
 def debug():

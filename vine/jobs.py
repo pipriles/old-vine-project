@@ -19,7 +19,7 @@ def to_string(t, format=config.DT_FORMAT):
 	return t.strftime(format)
 
 class VineJobs:
-	
+
 	def __init__(self):
 		self.jobs = []
 
@@ -37,12 +37,11 @@ class VineJobs:
 
 	def init_jobs(self, db):
 		self.clear_status(db)
-		jobs = db.query('SELECT * FROM job')
-		self.jobs = [JobData(*job) for job in jobs]
+		self.refresh_jobs(db)
 
 	def refresh_jobs(self, db):
-		for job in self.jobs:
-			job.refresh_job(db)
+		jobs = db.query('SELECT * FROM job')
+		self.jobs = [JobData(*job) for job in jobs]
 
 class JobData:
 
@@ -87,6 +86,8 @@ class JobData:
 
 		return "[%s, %s, %s, %s]" % args
 
+	# Maybe useful in the future
+	
 	def refresh_job(self, db):
 		sql = "SELECT * FROM job WHERE job.id = %s"
 		dbc = db.query(sql, (self._id,))

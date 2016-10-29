@@ -7,11 +7,15 @@ import MySQLdb as mysql
 import codecs
 import logging
 
+import config
+
+logger = logging.getLogger(__name__)
+
 # Remember this is old and maybe is not useful now:
 # Without this doesn't work :(
 codecs.register(lambda name: codecs.lookup('utf8') if name == 'utf8mb4' else None)
 
-logger = logging.getLogger(__name__)
+DEFAULT_CONFIG = (config.HOST, config.USER, config.PASS, config.DB)
 
 class Database:
 	""" Database wrapper object
@@ -24,29 +28,30 @@ class Database:
 	
 	"""
 	
-	def __init__(self, host='localhost', user='vine_app', 
-			password='supervine', db='vine'):
+	def __init__(self, host=None, user=None, passwd=None, db=None):
+		args = [host, user, passwd, db]
+		self.creds = [args[i] or DEFAULT_CONFIG[i] for i in range(4)]
 
-		self.host = host
-		self.user = user
-		self.password = password
-		self.db_name = db
-	
 	def connect(self):
 		if not self.open():
 			logger.info("Connecting to database...")
-			self.db = mysql.connect(self.host, self.user, 
-				self.password, self.db_name, charset='utf8mb4')
+			self.db = mysql.connect(*self.creds, charset='utf8mb4')
 			self.db.set_character_set('utf8mb4')
 			logger.info("Connected to database!")
 	
-	def temporal_use(self, func):
+	def __enter__(self):
 		self.connect()
-		func(self)
+		return self
+
+	def __exit__(self, exc, val, trace):
 		self.close()
+		return True
 
 	def commit(self):
 		self.db.commit()
+
+	def rollback(self):
+		self.db.rollback()
 
 	def open(self):
 		if hasattr(self, 'db') and self.db.open:
@@ -69,5 +74,10 @@ class Database:
 		logger.debug(sql)
 		dbc = self.db.cursor()
 		dbc.execute(sql, args)
+
+		# For now it will automatically commit
+		# Note that is should not commit because
+		# this will make we lose the rollback posibility
+
 		self.commit()
 		return dbc
