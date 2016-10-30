@@ -39,6 +39,7 @@ class CombineProcess(Process):
 			cast.download_videos()
 			cast.convert_videos()
 			cast.combine_videos()
+			cast.apply_changes()
 		finally:
 			cast.clean_videos()
 			self.job.finish_combine(self.db)
@@ -78,18 +79,11 @@ class VideosSpell:
 	def convert_videos(self):
 
 		conf = self.vid.conf
-		
-		# Here we should create the video
-		self.vid.create_video()
 
 		position = 0
 		for vine in self.downloaded:
 			ret = convert_video(vine, conf)
 			if ret:
-				self.vid.set_as_used(vine.id)
-				# Here we should link with the video
-				# I have to move this to make it more flexible
-				self.vid.link_vine(vine.id, position)
 				self.converted.append(ret)
 				position += 1
 
@@ -97,10 +91,17 @@ class VideosSpell:
 
 		if self.converted:
 			combine_videos(self.converted, self.vid.id)
-			self.vid.set_status(combined=True)
 			change_group(self.vid.id)
 		else:
 			logger.warning("Could not convert all the videos")
+
+	def apply_changes(self):
+
+		self.vid.create_video()
+		for vine in self.converted:
+			self.vid.set_as_used(vine.id)
+			self.vid.link_vine(vine.id, position)
+		self.vid.set_status(combined=True)
 
 	def upload_video(self):
 
@@ -133,6 +134,7 @@ class VideosSpell:
 				if url is not None:
 					# Here we should link to an account
 					self.vid.link_account(user, title, url)
+
 
 	def clean_videos(self):
 

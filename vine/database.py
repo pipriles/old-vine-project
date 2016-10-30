@@ -37,6 +37,7 @@ class Database:
 			logger.info("Connecting to database...")
 			self.db = mysql.connect(*self.creds, charset='utf8mb4')
 			self.db.set_character_set('utf8mb4')
+			self.db.autocommit(True)
 			logger.info("Connected to database!")
 	
 	def __enter__(self):
@@ -46,6 +47,9 @@ class Database:
 	def __exit__(self, exc, val, trace):
 		self.close()
 		return True
+
+	def autocommit(value):
+		self.db.autocommit(value)
 
 	def commit(self):
 		self.db.commit()
@@ -79,5 +83,4 @@ class Database:
 		# Note that is should not commit because
 		# this will make we lose the rollback posibility
 
-		self.commit()
 		return dbc
