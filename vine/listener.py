@@ -4,6 +4,7 @@
 # them and make the script change its flow
 
 import os
+import re
 import errno
 import socket
 import logging
@@ -50,6 +51,17 @@ class SocketProcess(Thread):
 
 	def not_valid(self):
 		self._sock.send('NOT VALID')
+
+	def combine_video(self, vid):
+		
+
+	def default(self, msg):
+
+		match = re.search('^COMBINE (\d+)$', msg)
+		if match:
+			return match.group(1)
+		else:
+			return self.not_valid
 
 	def interpret_msg(self, msg):
 		msg = msg.upper()
