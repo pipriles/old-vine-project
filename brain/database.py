@@ -32,6 +32,12 @@ class Database:
 		args = [host, user, passwd, db]
 		self.creds = [args[i] or DEFAULT_CONFIG[i] for i in range(4)]
 
+	# Maybe useful
+	def set_utf8mb4(self):
+		self.query('SET NAMES utf8mb4;')
+		self.query('SET CHARACTER SET utf8mb4;')
+		self.query('SET character_set_connection=utf8mb4;')
+
 	def connect(self):
 		if not self.open():
 			logger.info("Connecting to database...")

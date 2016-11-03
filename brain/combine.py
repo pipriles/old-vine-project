@@ -15,43 +15,10 @@ from multiprocessing import Process, Pool
 import config
 import download as dl
 import youtube as yt
-import video 
-from database import Database
+
+from data import video
 
 logger = logging.getLogger(__name__)
-
-class CombineProcess(Process):
-
-	def __init__(self, job):
-		name = "Combine Process %s" % job._id
-		super(CombineProcess, self).__init__(name=name)
-		self.job = job
-		
-		self.db = Database()
-		self.db.connect()
-
-		self.job.start_combine(self.db)
-
-	def run(self):
-		cast = VideosSpell(self.db, self.job)
-		try:
-			# Combine all the videos
-			cast.download_videos()
-			cast.convert_videos()
-			cast.combine_videos()
-			cast.apply_changes()
-		finally:
-			cast.clean_videos()
-			self.job.finish_combine(self.db)
-			logger.info("Finished combine process")
-
-		try:
-			# If autoupload flag is set
-			self.job.start_upload(self.db)
-			cast.upload_video()
-		finally:
-			self.job.finish_upload(self.db)
-			logger.info("Finished upload process")
 
 # Maybe this class should have inside
 # a VideoData initialization and not 

@@ -33,7 +33,7 @@ def initialize():
 	if db.open():
 		jobs.init_jobs(db)
 	else:
-		with db: 
+		with db:
 			jobs.init_jobs(db)
 		
 def end_with_this():
@@ -48,7 +48,7 @@ def run_scrape(job):
 	if job.can_scrape():
 		if job.scrape_pending() \
 		or job.scrape_time():
-			p = vine.ScrapeProcess(job)
+			p = vine.tasker.ScrapeProcess(job)
 			running.append(p)
 			p.start()
 	else:
@@ -60,7 +60,7 @@ def run_combine(job):
 	if job.can_combine():
 		if job.combine_pending() \
 		or job.combine_time():
-			p = vine.CombineProcess(job)
+			p = vine.tasker.CombineProcess(job)
 			running.append(p)
 			p.start()
 	else:

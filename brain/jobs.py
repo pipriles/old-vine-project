@@ -6,7 +6,8 @@
 import re
 import datetime as dt
 import config
-import video
+
+from data import video
 
 def to_datetime(t, format=config.DT_FORMAT):
 	if t is None:

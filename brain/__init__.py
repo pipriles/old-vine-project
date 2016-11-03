@@ -2,12 +2,11 @@
 
 import logging
 import config
+import tasker
 
 from database import Database
 from jobs import VineJobs
 from listener import SocketProcess
-from scrape import ScrapeProcess
-from combine import CombineProcess
 
 LOG_FORMAT = "[%(levelname)s] %(name)s : %(message)s"
 
@@ -17,4 +16,4 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(logging.Formatter(LOG_FORMAT))
 logger.addHandler(stream_handler)
 
-__all__ = ['VineJobs', 'SocketProcess', 'ScrapeProcess', 'CombineProcess', 'Database', 'config']
+__all__ = ['tasker', 'ScrapeProcess', 'CombineProcess', 'Database', 'config']

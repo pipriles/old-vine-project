@@ -15,6 +15,9 @@ from threading import Thread, Lock
 
 logger = logging.getLogger(__name__)
 
+# Should this class be in the tasker?
+# (This is not a task)
+
 class SocketProcess(Thread):
 
 	def __init__(self, id="Listen_Process", sock=None):
@@ -52,8 +55,7 @@ class SocketProcess(Thread):
 	def not_valid(self):
 		self._sock.send('NOT VALID')
 
-	def combine_video(self, vid):
-		
+	# Here i will add the reconvert support
 
 	def default(self, msg):
 

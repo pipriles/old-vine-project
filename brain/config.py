@@ -19,6 +19,7 @@ PASS = 'supervine'
 
 # Control varibles
 
+PARALLEL_MODE = 1
 SCRIPT_STATUS = 1
 DIRTY_JOBS = 0
 

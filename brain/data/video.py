@@ -1,24 +1,18 @@
 #!/usr/bin/env python2
 
+# This module should be about the final video
+# Any special class like VineVideo or VineData
+# Should be moved
+
 import re
 import datetime as dt
 
 from collections import namedtuple
 
 import util
-import config
-import youtube as yt
-
-# Vine video struct
-# I should transform this in a class
-# With database methods related
-
-fields  = "url "
-fields += "id "
-fields += "description "
-fields += "title "
-fields += "user"
-VineVideo = namedtuple("VineVideo", fields)
+import vine
+from .. import config
+from .. import youtube as yt
 
 # Video Settings struct
 # Another thing that maybe should be a class
@@ -91,12 +85,12 @@ class VideoData:
 
 		self.status = combined
 
-	def link_vine(self, vine, position):
+	def link_vine(self, vine_id, position):
 
 		sql  = "INSERT INTO vine_video (`vineID`, `videoID`, `position`) "
 		sql += "VALUES (%s, %s, %s)"
 
-		args = (vine, self.id, position)
+		args = (vine_id, self.id, position)
 		self.db.query(sql, args)
 
 	def link_account(self, account, title, url, lang='EN'):
@@ -127,14 +121,14 @@ class VideoData:
 		else:
 			return None
 
-	def set_as_used(self, vine):
+	def set_as_used(self, vine_id):
 		
 		if self.job:
 			sql  = "UPDATE vine_job SET used = 1 "
 			sql += "WHERE vine_job.jobID = %s"
 			sql += " AND vine_job.vineID = %s"
 
-			self.db.query(sql, (self.job._id, vine))
+			self.db.query(sql, (self.job._id, vine_id))
 
 	def make_title(self, text):
 
