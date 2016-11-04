@@ -31,6 +31,7 @@ class Database:
 	def __init__(self, host=None, user=None, passwd=None, db=None):
 		args = [host, user, passwd, db]
 		self.creds = [args[i] or DEFAULT_CONFIG[i] for i in range(4)]
+		self._closed = False
 
 	# Maybe useful
 	def set_utf8mb4(self):
@@ -47,11 +48,15 @@ class Database:
 			logger.info("Connected to database!")
 	
 	def __enter__(self):
-		self.connect()
+		if not self.open():
+			self._closed = True
+			self.connect()
 		return self
 
 	def __exit__(self, exc, val, trace):
-		self.close()
+		if self._closed:
+			self._closed = False
+			self.close()
 		return True
 
 	def autocommit(value):
@@ -86,7 +91,4 @@ class Database:
 		dbc.execute(sql, args)
 
 		# For now it will automatically commit
-		# Note that is should not commit because
-		# this will make we lose the rollback posibility
-
 		return dbc

@@ -11,7 +11,9 @@ import argparse
 import logging
 from time import sleep, time
 
-import vine
+import brain
+
+# Should make a root logger
 
 logger = logging.getLogger(__name__)
 
@@ -19,138 +21,106 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(logging.Formatter())
 logger.addHandler(stream_handler)
 
-db = vine.Database()
-sp = vine.SocketProcess()
-jobs = vine.VineJobs()
+db = brain.Database()
+sp = brain.SocketProcess()
+jobs = brain.VineJobs()
 
-running = []	# Running processes
-
-def initialize():
+def init_process():
 	# Listen to socket
 	sp.start()
 
 	# Connect to database
-	if db.open():
+	with db:
 		jobs.init_jobs(db)
-	else:
-		with db:
-			jobs.init_jobs(db)
 		
-def end_with_this():
+def finish_script():
 	sp.stop()
 	sp.join()
-	for p in running:
-		p.join()
+	brain.tasker.join()
 	db.close()
 
-def run_scrape(job):
+def update_jobs():
+	if brain.config.REAL_TIME \
+	or brain.config.DIRTY_JOBS:
+		with db:
+			jobs.refresh_jobs(db)
+		brain.config.DIRTY_JOBS = 0
 
-	if job.can_scrape():
-		if job.scrape_pending() \
-		or job.scrape_time():
-			p = vine.tasker.ScrapeProcess(job)
-			running.append(p)
-			p.start()
-	else:
-		if job.scrape_time():
-			job.hold_scrape()
-
-def run_combine(job):
-
-	if job.can_combine():
-		if job.combine_pending() \
-		or job.combine_time():
-			p = vine.tasker.CombineProcess(job)
-			running.append(p)
-			p.start()
-	else:
-		if job.combine_time():
-			job.hold_combine()
-
-def process_jobs():
-	for job in jobs:
-		run_scrape(job)
-		run_combine(job)
-
-def clean_zombies():
-	for x in xrange(len(running)):
-		p = running.pop(0)
-		if not p.is_alive():
-			vine.config.DIRTY_JOBS = 1
-			p.join()
-		else:
-			running.append(p)
+def debug():
+	logger.info("\nJobs:\n%s\n", jobs)
+	logger.info("Waiting:\n%s\n", brain.tasker.waiting())
+	logger.info("Running:\n%s\n", brain.tasker.running())
+	logger.debug("Status: %s", brain.config.SCRIPT_STATUS)
 
 def wait(old_time):
-	st = vine.config.sleep_time
+	st = brain.config.sleep_time
 	interval = time() - old_time
 	if interval <= st:
 		interval = st - interval
 		logger.info("Waiting %s seconds", interval)
 		sleep(interval)
 
-def update_jobs():
-	if db.open():
-		jobs.refresh_jobs(db)
-	else:
-		if vine.config.DIRTY_JOBS:
-			with db:
-				jobs.refresh_jobs(db)
-			vine.config.DIRTY_JOBS = 0
-
-def debug():
-	logger.info('')
-	logger.info("Jobs:")
-	logger.info(jobs)
-	logger.info('')
-	logger.info("Running:")
-	logger.info(running)
-	logger.info('')
-
+# Main logic of the script
 def main():
-	try:
-		initialize()
-		while True:
-			old_time = time()
-			debug()
-			# Main logic of the script
-			logger.debug("Status: %s", vine.config.SCRIPT_STATUS)
-			if vine.config.SCRIPT_STATUS:
-				process_jobs()
-
-			clean_zombies()
-			update_jobs()
-			wait(old_time)
-	except KeyboardInterrupt:
-		logger.critical("\nGood bye")
-	finally:
-		end_with_this()
+	init_process()
+	while True:
+		old_time = time()
+		debug()
+		if brain.config.SCRIPT_STATUS:
+			brain.tasker.process_jobs(jobs)
+		update_jobs()
+		wait(old_time)
 
 def set_from_args(args):
-	vine.config.sleep_time = args.sleep_time
-	vine.config.ffmpeg_bin = args.ffmpeg_bin
+	brain.config.REAL_TIME  = args.real_time
+	brain.config.sleep_time = args.sleep_time
+	brain.config.ffmpeg_bin = args.ffmpeg_bin
 
 if __name__ == '__main__':
 
-	parser = argparse.ArgumentParser(description="Here is where the magic happens")
-	parser.add_argument("--sleep-time", default=1, type=int, help="Sleep time interval", metavar='')
-	parser.add_argument("--log-level", default="WARNING", help="Filter log messages", metavar='')
-	parser.add_argument("--real-time", default=False, type=bool, help="Update jobs every second, (Just for debug)", metavar='')
-	parser.add_argument("--ffmpeg-bin", default="ffmpeg", help="ffmpeg command to be called", metavar='')
+	parser = argparse.ArgumentParser(
+		description="Here is where the magic happens")
+	
+	parser.add_argument("--sleep-time", 
+		default=1, 
+		type=int, 
+		help="Sleep time interval", 
+		metavar='')
+	
+	parser.add_argument("--log-level", 
+		default="WARNING", 
+		help="Filter log messages", 
+		metavar='')
+
+	parser.add_argument("--real-time", 
+		default=False, 
+		type=bool, 
+		help="Update jobs every second, (Just for debug)", 
+		metavar='')
+
+	parser.add_argument("--ffmpeg-bin", 
+		default="ffmpeg", 
+		help="ffmpeg command to be called", 
+		metavar='')
 
 	args = parser.parse_args()
 	attr = getattr(logging, args.log_level, 30)
 	logging.getLogger().setLevel(attr)
 
 	set_from_args(args)
-	logger.debug("Video path: %s", vine.config.video_path)
-	logger.debug("Image path: %s", vine.config.image_path)
-	logger.debug("Font path:  %s", vine.config.font_path)
-	logger.debug("Sleep time: %s", vine.config.sleep_time)
+	logger.debug("Video path: %s", brain.config.video_path)
+	logger.debug("Image path: %s", brain.config.image_path)
+	logger.debug("Font path:  %s", brain.config.font_path)
+	logger.debug("Sleep time: %s", brain.config.sleep_time)
 
-	if args.real_time:
+	if brain.config.REAL_TIME:
 		# In real time the database is always connected
 		logger.debug("-> REAL TIME MODE ON")
 		db.connect()
 
-	main()
+	try:
+		main()
+	except KeyboardInterrupt:
+		logger.critical("\nGood bye")
+	finally:
+		finish_script()

@@ -9,8 +9,8 @@ import datetime as dt
 
 from collections import namedtuple
 
-import util
-import vine
+from vine import VineVideo
+from .. import util
 from .. import config
 from .. import youtube as yt
 

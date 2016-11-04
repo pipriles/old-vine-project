@@ -8,7 +8,6 @@
 # - Change the video, image and font path
 
 import os
-from collections import namedtuple
 
 # Database
 
@@ -19,6 +18,7 @@ PASS = 'supervine'
 
 # Control varibles
 
+REAL_TIME = 1
 PARALLEL_MODE = 1
 SCRIPT_STATUS = 1
 DIRTY_JOBS = 0

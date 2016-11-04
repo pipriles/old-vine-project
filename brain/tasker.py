@@ -81,30 +81,32 @@ def put_scrape(task):
 def put_combine(task):
 	Waiting_Combines.append(task)
 
-def run_scrape(task=None):
-	if task is None:
+def run_scrape():
+	while Waiting_Scrapes:
 		task = Waiting_Scrapes.pop(0)
-	Running_Scrapes.append(task)
-	task.start()
+		Running_Scrapes.append(task)
+		task.start()
 
-def run_combine(task=None):
-	if task is None:
+def run_combine():
+	while Waiting_Combines:
+		if Running_Combines \
+		and not config.PARALLEL_MODE:
+			break
+
 		task = Waiting_Combines.pop(0)
-	Running_Combines.append(task)
-	task.start()
+		Running_Combines.append(task)
+		task.start()
 
 def exec_tasks():
-	
+	clean_zombies(Running_Scrapes)
+	clean_zombies(Running_Combines)
+
 	# I always execute the scrape
-	# tasks in parallel
+	# tasks in parallel, should i?
 	run_scrape()
+	run_combine()
 
-	if not Running_Combines \
-	or config.PARALLEL_MODE:
-		run_combine()
-
-def clean_zombies():
-	running = Running_Scrapes + Running_Combines
+def clean_zombies(running):
 	for x in xrange(len(running)):
 		p = running.pop(0)
 		if not p.is_alive():
@@ -112,10 +114,16 @@ def clean_zombies():
 			p.join()
 		else:
 			running.append(p)
+			
+def waiting():
+	return Waiting_Scrapes + Waiting_Combines
+
+def running():
+	return Running_Scrapes + Running_Combines
 
 def join():
-	running = Running_Scrapes + Running_Combines
-	map(running, lambda x: x.join)
+	for p in Running_Scrapes : p.join()
+	for p in Running_Combines: p.join()
 
 def try_scrape(job):
 
@@ -131,18 +139,17 @@ def try_scrape(job):
 def try_combine(job):
 
 	if job.can_combine():
-		if job.combine_pending() or job.combine_time():
+		if job.combine_pending() \
+		or job.combine_time():
 			p = CombineProcess(job)
 			put_combine(p)
 	else:
 		if job.combine_time():
 			job.hold_combine()
 
-def process_jobs():
+def process_jobs(jobs):
 	for job in jobs:
 		try_scrape(job)
 		try_combine(job)
-	if 
 
-def parallel_scrape():
-	return not running or config.PARALLEL_MODE
+	exec_tasks() 	# Run tasks 

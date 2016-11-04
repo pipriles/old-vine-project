@@ -102,7 +102,7 @@ class JobData:
 		dbc = db.query(sql, (self._id,))
 		return dbc.fetchall()
 
-
+	# This maybe should be moved to a class
 	def interpret(self, text, func=None):
 
 		if func is None:

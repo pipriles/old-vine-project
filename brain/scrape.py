@@ -6,6 +6,8 @@ import re
 import sys
 import logging
 
+from data import vine
+
 logger = logging.getLogger(__name__)
 
 class Scraper:
@@ -153,12 +155,12 @@ class Scraper:
 
 def process_job(job, db):
 	
-	data = VineData(job, db)
+	data = vine.VineData(job, db)
 	vids = Scraper(job.url, job.scrape_limit)
 	vids.scrape_data()
 
-	for vine in vids.scraped:
-		data.insert_vine(vine)
+	for vid in vids.scraped:
+		data.insert_vine(vid)
 
 # Test
 if __name__ == '__main__':
@@ -170,12 +172,12 @@ if __name__ == '__main__':
 	parser.add_argument("-s", "--size", default=10, help="Size of the request")
 	args = parser.parse_args()
 
-	vine = Scraper(args.url, args.size)	
-	_url = vine.scrape_data()
+	scrapy = Scraper(args.url, args.size)	
+	_url = scrapy.scrape_data()
 
 	# Write the output
-	vine.writeJson(sys.stdout)
+	scrapy.writeJson(sys.stdout)
 
-	print "\nYou got ", int(args.size) - vine.get_missed()
+	print "\nYou got ", int(args.size) - scrapy.get_missed()
 	print _url
 	

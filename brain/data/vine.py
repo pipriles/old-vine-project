@@ -7,14 +7,19 @@
 # I should transform this in a class
 # With database methods related
 
+from collections import namedtuple
 from datetime import datetime as dt
 
-fields  = "url "
-fields += "id "
-fields += "description "
-fields += "title "
-fields += "user"
-VineVideo = namedtuple("VineVideo", fields)
+class VineVideo:
+
+	def __init__(self, url, vid, 
+		description, title, user):
+
+		self.url = url
+		self.id = vid
+		self.description = description
+		self.title = title
+		self.user = user
 
 class VineData:
 

@@ -3,6 +3,8 @@
 # I have to add reconvert support to 
 # randomize the video combination
 
+import os
+import glob
 import logging
 import datetime as dt
 import re
@@ -24,19 +26,29 @@ logger = logging.getLogger(__name__)
 # a VideoData initialization and not 
 # in the process
 
+DT_FORMAT = "%Y%m%d%H%M%S"
+NOW = dt.datetime.now
+
+def temp_name(job):
+	return "{}{}".format(NOW().strftime(DT_FORMAT), job._id)
+
 class VideosSpell:
 
 	def __init__(self, db, job):
 		self.vid = video.VideoData(db, job=job)
 		self.downloaded = []
 		self.converted = []
+		self.combined = None
 
 	def download_videos(self):
 
 		top = video.get_top_videos(self.vid.db, self.vid.job)
 
-		# I should check if the videos
-		# already exists
+		# I should keep the video title
+		# and add a attribute path or name
+
+		for vid in top:
+			vid.title = "{}_{}".format(vid.title, self.vid.job._id)
 
 		self.downloaded = dl.download_videos(top)
 
@@ -44,42 +56,50 @@ class VideosSpell:
 			logger.debug(vid)
 
 	def convert_videos(self):
-
-		conf = self.vid.conf
-
-		position = 0
+		
+		conf = self.vid.conf 	# Should be a simple function?
+		
 		for vine in self.downloaded:
 			ret = convert_video(vine, conf)
 			if ret:
 				self.converted.append(ret)
-				position += 1
 
 	def combine_videos(self):
 
 		if self.converted:
-			combine_videos(self.converted, self.vid.id)
-			change_group(self.vid.id)
+			name = temp_name(self.vid.job)
+			ret = combine_videos(self.converted, name)
+			if ret:
+				self.combined = name
+				change_group(self.combined)
 		else:
 			logger.warning("Could not convert all the videos")
 
 	def apply_changes(self):
 
-		self.vid.create_video()
-		for vine in self.converted:
-			self.vid.set_as_used(vine.id)
-			self.vid.link_vine(vine.id, position)
-		self.vid.set_status(combined=True)
+		if self.combined:
+			self.vid.create_video()
+			old = "{}{}.mp4".format(config.video_path, self.combined)
+			new = "{}{}.mp4".format(config.video_path, self.vid.id)
+			os.rename(old, new)
+			logger.debug(old)
+			logger.debug(new)
+
+			position = 0
+			for vine in self.converted:
+				self.vid.set_as_used(vine.id)
+				self.vid.link_vine(vine.id, position)
+				position += 1
+			self.vid.set_status(combined=True)
 
 	def upload_video(self):
-
-		logger.debug(self.vid.job.autoupload)
 
 		if self.vid.job.autoupload:
 
 			accounts = self.vid.get_accounts()
 			logger.debug(accounts)
 
-			# What should i put in the description?
+			# I have to add the autogen description
 			# Maybe a settings for the privacy
 
 			file = config.video_path + '%s.mp4' % self.vid.id
@@ -104,24 +124,26 @@ class VideosSpell:
 
 
 	def clean_videos(self):
-
 		# Delete videos used
 		for vid in self.downloaded:
-			temp = config.video_path + vid.title
-			command = ['rm', '-rf', temp + ".mp4", temp + ".mpg"]
-			call(command)
+			temp = "{}{}.*".format(config.video_path, vid.title)
+			for file in glob.glob(temp):
+				os.remove(file)
+				logger.debug("Deleting %s", file)
 
 def combine_videos(vids, name):
 
-	videos = "|".join([config.video_path + "%s.mpg" % x.title for x in vids])
+	files = ['{}{}.mpg'.format(config.video_path, x.title) for x in vids]
+	videos = "|".join(files)
 	
  	command = [
  		config.ffmpeg_bin, '-y', '-i', 
- 		'concat:%s' % videos, 
+ 		'concat:%s' % (videos,), 
  		'-c', 'copy',
- 		config.video_path + '%s.mp4' % name
+ 		'%s%s.mp4' % (config.video_path, name)
  	]
-	call(command)
+
+ 	return True	if call(command) == 0 else False
 
 def convert_video(vid, conf):
 
@@ -141,20 +163,15 @@ def convert_video(vid, conf):
 	command = [
 		config.ffmpeg_bin, 
 		'-loop', '1', 
-		'-i', config.image_path + '%s' % conf.image, 
-		'-i', config.video_path + "%s.mp4" % (vid.title), 
+		'-i', '%s%s' % (config.image_path, conf.image), 
+		'-i', '%s%s.mp4' % (config.video_path, vid.title), 
 		'-filter_complex', 
 		cfilter,
 		'-map', '"[out]"', 
 		'-map', '1:a',
 		'-y', '-qscale:v', '1',
-		config.video_path + '%s.mpg' % vid.title
+		'%s%s.mpg' % (config.video_path, vid.title)
 	]
-
-	logger.debug('')
-	logger.debug('DESCRIPTION: ' + description)
-	logger.debug(' '.join(command))
-	logger.debug('')
 
 	# Ugly join call should not be used
 	if call(' '.join(command), shell=True) == 0:
