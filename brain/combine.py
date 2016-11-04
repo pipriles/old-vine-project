@@ -82,8 +82,6 @@ class VideosSpell:
 			old = "{}{}.mp4".format(config.video_path, self.combined)
 			new = "{}{}.mp4".format(config.video_path, self.vid.id)
 			os.rename(old, new)
-			logger.debug(old)
-			logger.debug(new)
 
 			position = 0
 			for vine in self.converted:
