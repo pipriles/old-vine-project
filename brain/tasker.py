@@ -8,8 +8,8 @@ from multiprocessing import Process
 
 import config
 import scrape
+import combine
 
-from combine import VideosSpell
 from database import Database
 
 logger = logging.getLogger(__name__)
@@ -28,52 +28,57 @@ class ScrapeProcess(Process):
 		name = "Scrape Process %s" % job._id
 		super(ScrapeProcess, self).__init__(name=name)
 		logger.info("Started scrape process")
-		self.job = job
 		
-		self.db = Database()
-		self.db.connect()
+		db = Database()
+		db.connect()
+		job.start_scrape(db)
 
-		self.job.start_scrape(self.db)
+		self.job = job
+		self.db = db
 
 	def run(self):
-		try:
-			scrape.process_job(self.job, self.db)
-		finally:
-			self.job.finish_scrape(self.db)
-			logger.info("Finished scrape process")
+		scrape.process_job(self.job, self.db)
+		self.job.finish_scrape(self.db)
+		logger.info("Finished scrape process")
 
 class CombineProcess(Process):
 
-	def __init__(self, job):
+	def __init__(self, vid=None, job=None):
 		name = "Combine Process %s" % job._id
 		super(CombineProcess, self).__init__(name=name)
-		self.job = job
-		
-		self.db = Database()
-		self.db.connect()
 
-		self.job.start_combine(self.db)
+		db = Database()
+		db.connect()
+
+		if vid and job is None:
+			proc = combine.reconvert_vid(db, vid)
+		else:
+			proc = combine.create_from_job(db, job)
+			job.start_combine(db)
+
+		self.proc = proc
+		self.vid = vid
+		self.job = job
+		self.db = db
 
 	def run(self):
-		cast = VideosSpell(self.db, self.job)
-		try:
-			# Combine all the videos
-			cast.download_videos()
-			cast.convert_videos()
-			cast.combine_videos()
-			cast.apply_changes()
-		finally:
-			cast.clean_videos()
-			self.job.finish_combine(self.db)
-			logger.info("Finished combine process")
+		# Combine all the videos
+		self.proc.create_video()
+		logger.info("Finished combine process")
 
-		try:
-			# If autoupload flag is set
+		# If autoupload flag is set and job is set
+		if self.job:
+			self.job.finish_combine(self.db)
 			self.job.start_upload(self.db)
-			cast.upload_video()
-		finally:
+			self.proc.upload_video()
 			self.job.finish_upload(self.db)
 			logger.info("Finished upload process")
+
+def request_combine(vid):
+	# I have to handle the case when
+	# it request concurrently
+	p = CombineProcess(vid=vid)
+	put_combine(p)
 
 def put_scrape(task):
 	Waiting_Scrapes.append(task)
@@ -141,7 +146,7 @@ def try_combine(job):
 	if job.can_combine():
 		if job.combine_pending() \
 		or job.combine_time():
-			p = CombineProcess(job)
+			p = CombineProcess(job=job)
 			put_combine(p)
 	else:
 		if job.combine_time():

@@ -32,25 +32,37 @@ NOW = dt.datetime.now
 def temp_name(job):
 	return "{}{}".format(NOW().strftime(DT_FORMAT), job._id)
 
-class VideosSpell:
+def create_from_job(db, job):
+	data = video.VideoData(db, job=job)
+	return CombineProtocol(data)
 
-	def __init__(self, db, job):
-		self.vid = video.VideoData(db, job=job)
+def reconvert_vid(db, vid):
+	data = video.VideoData(db, vid=vid)
+	return CombineProtocol(data)
+
+class CombineProtocol:
+
+	def __init__(self, data):
+		self.vid = data
 		self.downloaded = []
 		self.converted = []
 		self.combined = None
 
+	# Should i?
+	def create_video(self):
+		try:
+			# Combine all the videos
+			self.download_videos()
+			self.convert_videos()
+			self.combine_videos()
+			self.apply_changes()
+		finally:
+			self.clean_videos()
+
 	def download_videos(self):
 
-		top = video.get_top_videos(self.vid.db, self.vid.job)
-
-		# I should keep the video title
-		# and add a attribute path or name
-
-		for vid in top:
-			vid.title = "{}_{}".format(vid.title, self.vid.job._id)
-
-		self.downloaded = dl.download_videos(top)
+		vids = self.vid.get_videos()
+		self.downloaded = dl.download_videos(vids)
 
 		for vid in self.downloaded:
 			logger.debug(vid)
@@ -92,7 +104,7 @@ class VideosSpell:
 
 	def upload_video(self):
 
-		if self.vid.job.autoupload:
+		if self.vid.job is None or self.vid.job.autoupload:
 
 			accounts = self.vid.get_accounts()
 			logger.debug(accounts)

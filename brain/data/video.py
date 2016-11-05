@@ -48,23 +48,73 @@ class VideoData:
 	def __init__(self, db, vid=None, conf_id=None, source=None, 
 		name=None, date=None, job=None):
 
-		self.db = db
+		self.db  = db
+		self.id  = vid
 		self.job = job
-		self.id = vid
 
 		# If we pass just the video
 		if job is None:
-			self.conf_id = conf_id
-			self.source = source
-			self.date = date
-			self.name = name
+			args = (conf_id, source, name, date, 0)
+			self.set_info(*args)
 
 		# If we pass just the job
 		else:
-			self.conf_id = job.settings_id
-			self.source = job.url
-			self.date = dt.datetime.now().strftime(config.DT_FORMAT)
-			self.name = "{}_{}".format(job._id, self.date)
+			args = (job.settings_id, job.url, job.name,
+				dt.datetime.now().strftime(config.DT_FORMAT), 0)
+			self.set_info(*args)
+
+	def fetch_info(self):
+
+		if self.id:
+			sql = "SELECT * FROM video WHERE id = %s"
+			query = self.db.query(sql, (self.id,))
+			args = query.fetchone()
+			self.set_info(*args)
+
+	def set_info(self, conf_id, source, name, date, status):
+
+		self.conf_id = conf_id
+		self.source  = source
+		self.name    = name
+		self.date    = date
+		self.status  = status
+
+	def get_videos(self):
+
+		ret = []
+		db  = self.db
+		job = self.job
+
+		vids = self._get_linked()
+		if vids is None:
+			vids = get_top_videos(db, job)
+
+		for x in vids:
+			args = x[:4]
+			if self.id:
+				args.append("{}_Vid_{}".format(_id, self.id))
+			elif job:
+				args.append("{}_Job_{}".format(_id, job._id))
+			else:
+				args.append(_id)
+
+			ret.append(VineVideo(*args))
+
+		return ret
+
+	def _get_linked(self):
+		result = None
+		if self.id:
+			sql  = 'SELECT vine.url, vine.id, vine.title, user.name'
+			sql += ' FROM `vine_video` '
+			sql += 'INNER JOIN vine'
+			sql += ' ON vine_video.vineID=vine.id'
+			sql += 'INNER JOIN user'
+			sql += ' ON vine.userID=user.id'
+			sql += 'WHERE vine_video.videoID=%s'
+			query = self.db.query(sql, (self.id,))
+			result = query.fetchall()
+		return result
 
 	def create_video(self):
 
@@ -223,10 +273,13 @@ def get_top_videos(db, job):
     	LIMIT %s
     """
 
+	
 	result = db.query(sql, (job._id, job.combine_limit))
-	return map(_make_it_pretty, result.fetchall())
+	return result.fetchall()
 
 def _make_it_pretty(vid):
+
+	# This is not useful anymore
 
 	# I should make a column description length
 	# in the settings table
