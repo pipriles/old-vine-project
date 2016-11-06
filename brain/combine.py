@@ -29,14 +29,14 @@ logger = logging.getLogger(__name__)
 DT_FORMAT = "%Y%m%d%H%M%S"
 NOW = dt.datetime.now
 
-def temp_name(job):
-	return "{}{}".format(NOW().strftime(DT_FORMAT), job._id)
+def temp_name(i):
+	return "{}{}".format(NOW().strftime(DT_FORMAT), i)
 
-def create_from_job(db, job):
+def proc_job(db, job):
 	data = video.VideoData(db, job=job)
 	return CombineProtocol(data)
 
-def reconvert_vid(db, vid):
+def proc_vid(db, vid):
 	data = video.VideoData(db, vid=vid)
 	return CombineProtocol(data)
 
@@ -79,7 +79,13 @@ class CombineProtocol:
 	def combine_videos(self):
 
 		if self.converted:
-			name = temp_name(self.vid.job)
+			if not self.vid.id is None:
+				name = str(self.vid.id)
+			elif not self.vid.job is None:
+				name = temp_name(self.vid.job._id)
+			else:
+				raise RuntimeError('Cannot guess a proper name')
+
 			ret = combine_videos(self.converted, name)
 			if ret:
 				self.combined = name
@@ -89,7 +95,7 @@ class CombineProtocol:
 
 	def apply_changes(self):
 
-		if self.combined:
+		if self.vid.id is None and self.combined:
 			self.vid.create_video()
 			old = "{}{}.mp4".format(config.video_path, self.combined)
 			new = "{}{}.mp4".format(config.video_path, self.vid.id)
@@ -120,6 +126,9 @@ class CombineProtocol:
 			privacyStatus = yt.PRIVACY_STATUS[0]
 
 			for x in accounts:
+				# The title and the description
+				# are from the video module now
+
 				user = x[0]
 				title = yt.make_title(x[1], self.vid.job)
 				args = yt.UploadVideo(user, file, title, 

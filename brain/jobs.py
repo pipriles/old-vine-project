@@ -7,7 +7,7 @@ import re
 import datetime as dt
 import config
 
-from data import video
+from data import props
 
 def to_datetime(t, format=config.DT_FORMAT):
 	if t is None:
@@ -20,7 +20,7 @@ def to_string(t, format=config.DT_FORMAT):
 	return t.strftime(format)
 
 class VineJobs:
-
+	# I should pass the database too
 	def __init__(self):
 		self.jobs = []
 
@@ -42,9 +42,9 @@ class VineJobs:
 
 	def refresh_jobs(self, db):
 		jobs = db.query('SELECT * FROM job')
-		self.jobs = [JobData(*job) for job in jobs]
+		self.jobs = [JobObj(*job) for job in jobs]
 
-class JobData:
+class JobObj:
 
 	def __init__(self, _id, settings_id, name, url, 
 		scrape_limit, scrape_interval, next_scrape, 
@@ -86,21 +86,6 @@ class JobData:
 			self.next_combine - dt.datetime.now())
 
 		return "[%s, %s, %s, %s]" % args
-
-	# Maybe useful in the future
-	
-	def refresh_job(self, db):
-		sql = "SELECT * FROM job WHERE job.id = %s"
-		dbc = db.query(sql, (self._id,))
-		new = dbc.fetchone()
-		self.__init__(*new)
-
-	def get_accounts(self, db):
-		sql  = "SELECT accountID, title, language"
-		sql += " FROM job_account "
-		sql += "WHERE jobID = %s"
-		dbc = db.query(sql, (self._id,))
-		return dbc.fetchall()
 
 	# This maybe should be moved to a class
 	def interpret(self, text, func=None):
@@ -171,9 +156,6 @@ class JobData:
 		return dt.datetime.now().strftime(new_title)
 
 	###
-	
-	def fetch_conf(self, db):
-		return video.fetch_conf(self.settings_id, db)
 
 	def scrape_time(self):
 		present = dt.datetime.now()
@@ -182,53 +164,6 @@ class JobData:
 	def combine_time(self):
 		present = dt.datetime.now()
 		return True if self.next_combine <= present else False
-
-	def _change_status(self, new_status, db):
-		self.status = new_status
-		sql  = "UPDATE job SET job.status = %s WHERE job.id = %s"
-		db.query(sql, (new_status, self._id))
-
-	def update_scrape_time(self, db):
-		interval = dt.timedelta(minutes=self.scrape_interval)
-		self.next_scrape = dt.datetime.now() + interval
-
-		sql = "UPDATE job SET job.next_scrape = %s WHERE job.id = %s"
-		db.query(sql, (to_string(self.next_scrape), self._id)) 
-
-	def update_combine_time(self, db):
-		interval = dt.timedelta(minutes=self.combine_interval)
-		self.next_combine = dt.datetime.now() + interval
-
-		sql = "UPDATE job SET job.next_combine = %s WHERE job.id = %s"
-		db.query(sql, (to_string(self.next_combine), self._id)) 
-
-	def start_scrape(self, db):
-		new_status = '1' + self.status[1] + self.status[2]
-		self._change_status(new_status, db)
-		self.update_scrape_time(db)
-		self.free_scrape()
-
-	def start_combine(self, db):
-		new_status = self.status[0] + '1' + self.status[2]
-		self._change_status(new_status, db)
-		self.update_combine_time(db)
-		self.free_combine()
-	
-	def start_upload(self, db):
-		new_status = self.status[0] + self.status[1] + '1'
-		self._change_status(new_status, db)
-
-	def finish_scrape(self, db):
-		new_status = '0' + self.status[1] + self.status[2]
-		self._change_status(new_status, db)
-
-	def finish_combine(self, db):
-		new_status = self.status[0] + '0' + self.status[2]
-		self._change_status(new_status, db)
-
-	def finish_upload(self, db):
-		new_status = self.status[0] + self.status[1] + '0'
-		self._change_status(new_status, db)
 
 	def can_scrape(self):
 		return self.status[0] == '0' and (
@@ -258,3 +193,90 @@ class JobData:
 	def free_combine(self):
 		if self.__combining > 0:
 			self.__combining -= 1
+
+class JobData:
+
+	def __init__(self, job, db=None):
+		self.job = job
+		self.db = db
+
+	# Maybe useful in the future
+	def refresh_job(self):
+		sql = "SELECT * FROM job WHERE job.id = %s"
+		dbc = self.db.query(sql, (self.job._id,))
+		new = dbc.fetchone()
+		self.job.__init__(*new)
+
+	def get_accounts(self):
+		sql  = "SELECT accountID, title, language"
+		sql += " FROM job_account "
+		sql += "WHERE jobID = %s"
+		dbc = self.db.query(sql, (self.job._id,))
+		return dbc.fetchall()
+
+	def set_db(self, db):
+		self._db = db
+
+	def unset_db(self):
+		self._db = None
+
+	def fetch_conf(self):
+		return props.fetch_conf(self.job.settings_id, self.db)
+
+	def get_attr(self):
+		return (self.job, self.db)
+
+	def _change_status(self, new_status):
+		self.job.status = new_status
+		sql  = "UPDATE job SET job.status = %s WHERE job.id = %s"
+		self.db.query(sql, (new_status, self.job._id))
+
+	def update_scrape_time(self):
+		job = self.job
+		interval = dt.timedelta(minutes=job.scrape_interval)
+		job.next_scrape = dt.datetime.now() + interval
+
+		sql = "UPDATE job SET job.next_scrape = %s WHERE job.id = %s"
+		self.db.query(sql, (to_string(job.next_scrape), job._id)) 
+
+	def update_combine_time(self):
+		job = self.job
+		interval = dt.timedelta(minutes=job.combine_interval)
+		job.next_combine = dt.datetime.now() + interval
+
+		sql = "UPDATE job SET job.next_combine = %s WHERE job.id = %s"
+		self.db.query(sql, (to_string(job.next_combine), job._id)) 
+
+	def start_scrape(self):
+		old_status = self.job.status
+		new_status = '1' + old_status[1] + old_status[2]
+		self._change_status(new_status)
+		self.update_scrape_time()
+		self.job.free_scrape()
+
+	def start_combine(self):
+		old_status = self.job.status
+		new_status = old_status[0] + '1' + old_status[2]
+		self._change_status(new_status)
+		self.update_combine_time()
+		self.job.free_combine()
+	
+	def start_upload(self):
+		old_status = self.job.status
+		new_status = old_status[0] + old_status[1] + '1'
+		self._change_status(new_status)
+
+	def finish_scrape(self):
+		old_status = self.job.status
+		new_status = '0' + old_status[1] + old_status[2]
+		self._change_status(new_status)
+
+	def finish_combine(self):
+		old_status = self.job.status
+		new_status = old_status[0] + '0' + old_status[2]
+		self._change_status(new_status)
+
+	def finish_upload(self):
+		old_status = self.job.status
+		new_status = old_status[0] + old_status[1] + '0'
+		self._change_status(new_status)

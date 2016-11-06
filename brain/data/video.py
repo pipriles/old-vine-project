@@ -7,38 +7,12 @@
 import re
 import datetime as dt
 
-from collections import namedtuple
-
+import props
 from vine import VineVideo
 from .. import util
 from .. import config
 from .. import youtube as yt
-
-# Video Settings struct
-# Another thing that maybe should be a class
-
-fields  = "id "
-fields += "scale_1 "
-fields += "scale_2 "
-fields += "text_x "
-fields += "text_y "
-fields += "text_size "
-fields += "font_size "
-fields += "font_color "
-fields += "font_background_color "
-fields += "font "
-fields += "image"
-Settings = namedtuple("Settings", fields)
-
-def fetch_conf(conf_id, db):
-	if conf_id is None:
-		conf = config.DEFAULT_SETTINGS
-		return Settings(*conf)
-	else:
-		sql = "SELECT * FROM settings WHERE id = %s;"
-		dbc = db.query(sql, (conf_id,))
-		conf = dbc.fetchone()
-		return Settings(*conf)
+from .. import jobs
 
 class VideoData:
 
@@ -90,15 +64,15 @@ class VideoData:
 			vids = get_top_videos(db, job)
 
 		for x in vids:
-			args = x[:4]
+			url, vid, description, user = x[:4]
 			if self.id:
-				args.append("{}_Vid_{}".format(_id, self.id))
+				title = "{}_Vid_{}".format(vid, self.id)
 			elif job:
-				args.append("{}_Job_{}".format(_id, job._id))
+				title = "{}_Job_{}".format(vid, job._id)
 			else:
-				args.append(_id)
+				title = vid
 
-			ret.append(VineVideo(*args))
+			ret.append(VineVideo(url, vid, description, title, user))
 
 		return ret
 
@@ -108,9 +82,9 @@ class VideoData:
 			sql  = 'SELECT vine.url, vine.id, vine.title, user.name'
 			sql += ' FROM `vine_video` '
 			sql += 'INNER JOIN vine'
-			sql += ' ON vine_video.vineID=vine.id'
+			sql += ' ON vine_video.vineID=vine.id '
 			sql += 'INNER JOIN user'
-			sql += ' ON vine.userID=user.id'
+			sql += ' ON vine.userID=user.id '
 			sql += 'WHERE vine_video.videoID=%s'
 			query = self.db.query(sql, (self.id,))
 			result = query.fetchall()
@@ -160,14 +134,15 @@ class VideoData:
 		# should not be set manually
 
 		if not hasattr(self, '_conf'):
-			self._conf = fetch_conf(self.conf_id, self.db)
+			self._conf = props.fetch_conf(self.conf_id, self.db)
 
 		return self._conf
 
 	def get_accounts(self):
 
 		if self.job:
-			return self.job.get_accounts(self.db)
+			data = jobs.JobData(self.job, self.db)
+			return data.get_accounts()
 		else:
 			return None
 

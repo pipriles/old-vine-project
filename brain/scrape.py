@@ -154,7 +154,6 @@ class Scraper:
 # Maybe a Scraper parameter?
 
 def process_job(job, db):
-	
 	data = vine.VineData(job, db)
 	vids = Scraper(job.url, job.scrape_limit)
 	vids.scrape_data()

@@ -5,12 +5,15 @@
 
 import logging
 from multiprocessing import Process
+from threading import Lock
 
 import config
 import scrape
 import combine
+import jobs
 
 from database import Database
+from jobs import JobData
 
 logger = logging.getLogger(__name__)
 
@@ -21,64 +24,109 @@ Waiting_Scrapes = []
 Waiting_Combines = []
 Running_Scrapes = []
 Running_Combines = []
+Recombining = set()
 
-class ScrapeProcess(Process):
+def scrape_msg(func):
+	def wrapper(self):
+		logger.info("Started scrape process")
+		func(self)
+		logger.info("Finished scrape process")
+	return wrapper
+
+def combine_msg(func):
+	def wrapper(self):
+		logger.info("Started combine process")
+		func(self)
+		logger.info("Finished combine process")
+	return wrapper
+
+def upload_msg(func):
+	def wrapper(self):
+		logger.info("Started upload process")
+		func(self)
+		logger.info("Finished upload process")
+	return wrapper
+
+class ScrapeTask(Process):
 
 	def __init__(self, job):
 		name = "Scrape Process %s" % job._id
-		super(ScrapeProcess, self).__init__(name=name)
-		logger.info("Started scrape process")
-		
 		db = Database()
 		db.connect()
-		job.start_scrape(db)
+		data = jobs.JobData(job, db)
+		data.start_scrape()
 
-		self.job = job
-		self.db = db
+		super(ScrapeTask, self).__init__(name=name)
+		self.data = data
 
 	def run(self):
-		scrape.process_job(self.job, self.db)
-		self.job.finish_scrape(self.db)
-		logger.info("Finished scrape process")
+		self.scrape()
 
-class CombineProcess(Process):
+	@scrape_msg
+	def scrape(self):
+		data = self.data
+		scrape.process_job(data.job, data.db)
+		data.finish_scrape()
 
-	def __init__(self, vid=None, job=None):
+class CombineJobTask(Process):
+
+	def __init__(self, job):
 		name = "Combine Process %s" % job._id
-		super(CombineProcess, self).__init__(name=name)
+		db = Database()
+		db.connect()
+		data = jobs.JobData(job, db)
+		data.start_combine()
+		proc = combine.proc_job(db, job)
 
+		super(CombineJobTask, self).__init__(name=name)
+		self.data = data
+		self.proc = proc
+
+	def run(self):
+		self.combine()
+		self.upload()
+
+	@combine_msg
+	def combine(self):
+		self.proc.create_video()
+		self.data.finish_combine()
+
+	@upload_msg
+	def upload(self):
+		self.data.start_upload()
+		self.proc.upload_video()
+		self.data.finish_upload()
+
+class RecombineTask(Process):
+
+	def __init__(self, vid):
+		Recombining.add(vid)
+
+		name = "Recombine Process %s" % vid
 		db = Database()
 		db.connect()
 
-		if vid and job is None:
-			proc = combine.reconvert_vid(db, vid)
-		else:
-			proc = combine.create_from_job(db, job)
-			job.start_combine(db)
-
-		self.proc = proc
+		super(RecombineTask, self).__init__(name=name)
+		self.proc = combine.proc_vid(db, vid)
 		self.vid = vid
-		self.job = job
-		self.db = db
 
 	def run(self):
-		# Combine all the videos
-		self.proc.create_video()
-		logger.info("Finished combine process")
+		self.recombine()
 
-		# If autoupload flag is set and job is set
-		if self.job:
-			self.job.finish_combine(self.db)
-			self.job.start_upload(self.db)
-			self.proc.upload_video()
-			self.job.finish_upload(self.db)
-			logger.info("Finished upload process")
+	@combine_msg
+	def recombine(self):
+		self.proc.create_video()
+
+	def join(self):
+		# Notice is not remove
+		Recombining.discard(self.vid)
+		super(RecombineTask, self).join()
 
 def request_combine(vid):
-	# I have to handle the case when
-	# it request concurrently
-	p = CombineProcess(vid=vid)
-	put_combine(p)
+	# Should i put a lock here?
+	if not vid in Recombining:
+		p = RecombineTask(vid)
+		put_combine(p)
 
 def put_scrape(task):
 	Waiting_Scrapes.append(task)
@@ -135,7 +183,7 @@ def try_scrape(job):
 	if job.can_scrape():
 		if job.scrape_pending() \
 		or job.scrape_time():
-			p = ScrapeProcess(job)
+			p = ScrapeTask(job)
 			put_scrape(p)
 	else:
 		if job.scrape_time():
@@ -146,7 +194,7 @@ def try_combine(job):
 	if job.can_combine():
 		if job.combine_pending() \
 		or job.combine_time():
-			p = CombineProcess(job=job)
+			p = CombineJobTask(job=job)
 			put_combine(p)
 	else:
 		if job.combine_time():

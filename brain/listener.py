@@ -13,6 +13,8 @@ import config
 
 from threading import Thread, Lock
 
+import tasker
+
 logger = logging.getLogger(__name__)
 
 # Should this class be in the tasker?
@@ -31,7 +33,7 @@ class SocketProcess(Thread):
 				self._sock.wait()
 				msg = self._sock.recv()
 				logger.debug('-> Message: %s', msg)
-				self.interpret_msg(msg)()
+				self.interpret_msg(msg)
 			except socket.error, e:
 				logger.debug('Broken pipe!')
 			except Exception as e:
@@ -42,6 +44,7 @@ class SocketProcess(Thread):
 				self._sock.disconnect()
 
 	def toggle_status(self):
+		logger.debug('SE ESTA LLAMANDO A TOGGLE STATUS')
 		new_status = not config.SCRIPT_STATUS
 		config.SCRIPT_STATUS = new_status
 
@@ -55,23 +58,29 @@ class SocketProcess(Thread):
 	def not_valid(self):
 		self._sock.send('NOT VALID')
 
-	# Here i will add the reconvert support
+	def reconvert_vid(self, vid):
+		logger.debug('Request combine for %s', vid)
+		tasker.request_combine(vid)
 
 	def default(self, msg):
 
 		match = re.search('^COMBINE (\d+)$', msg)
 		if match:
-			return match.group(1)
+			vid = match.group(1)
+			self.reconvert_vid(vid)
 		else:
-			return self.not_valid
+			self.not_valid()
 
 	def interpret_msg(self, msg):
 		msg = msg.upper()
-		return {
-			'CHANGE STATUS': self.toggle_status,
-			'GET STATUS': self.get_status,
-			'REFRESH JOBS': self.refresh_jobs
-		}.get(msg, self.not_valid)
+		if msg == 'CHANGE STATUS':
+			self.toggle_status()
+		elif msg == 'GET STATUS':
+			self.get_status()
+		elif msg == 'REFRESH JOBS':
+			self.refresh_jobs()
+		else:
+			self.default(msg)
 
 	def stop(self):
 		self._sock.close()
