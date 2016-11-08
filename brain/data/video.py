@@ -86,6 +86,7 @@ class VideoData:
 			sql += 'INNER JOIN user'
 			sql += ' ON vine.userID=user.id '
 			sql += 'WHERE vine_video.videoID=%s'
+			sql += " ORDER BY vine_video.position ASC"
 			query = self.db.query(sql, (self.id,))
 			result = query.fetchall()
 		return result
@@ -100,14 +101,15 @@ class VideoData:
 			dbc = self.db.query(sql, args)
 			
 			self.id = dbc.lastrowid
-			self.status = False
+			self.status = 0
 
-	def set_status(self, combined=False):
+	def set_status(self, stat):
 
-		sql = "UPDATE video SET status = %s WHERE id = %s"
-		self.db.query(sql, (combined, self.id))
+		if not self.id is None:
+			sql = "UPDATE video SET status = %s WHERE id = %s"
+			self.db.query(sql, (stat, self.id))
 
-		self.status = combined
+			self.status = stat
 
 	def link_vine(self, vine_id, position):
 

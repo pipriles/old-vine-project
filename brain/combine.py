@@ -50,12 +50,16 @@ class CombineProtocol:
 
 	# Should i?
 	def create_video(self):
+		self.vid.set_status(2)
 		try:
 			# Combine all the videos
 			self.download_videos()
 			self.convert_videos()
 			self.combine_videos()
 			self.apply_changes()
+		except Exception as e:
+			self.vid.set_status(0)
+			raise e
 		finally:
 			self.clean_videos()
 
@@ -94,7 +98,7 @@ class CombineProtocol:
 			logger.warning("Could not convert all the videos")
 
 	def apply_changes(self):
-
+		logger.debug('Applying changes')
 		if self.vid.id is None and self.combined:
 			self.vid.create_video()
 			old = "{}{}.mp4".format(config.video_path, self.combined)
@@ -102,11 +106,14 @@ class CombineProtocol:
 			os.rename(old, new)
 
 			position = 0
+			logger.debug('Linking videos')
 			for vine in self.converted:
 				self.vid.set_as_used(vine.id)
 				self.vid.link_vine(vine.id, position)
 				position += 1
-			self.vid.set_status(combined=True)
+
+		logger.debug('Setting status to combined')
+		self.vid.set_status(1)
 
 	def upload_video(self):
 
