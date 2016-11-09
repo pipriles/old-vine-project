@@ -57,7 +57,7 @@ class CombineProtocol:
 			self.convert_videos()
 			self.combine_videos()
 			self.apply_changes()
-		except Exception as e:
+		except BaseException as e:
 			self.vid.set_status(0)
 			raise e
 		finally:
@@ -162,10 +162,15 @@ def combine_videos(vids, name):
 	files = ['{}{}.mpg'.format(config.video_path, x.title) for x in vids]
 	videos = "|".join(files)
 	
+	# Changed the codec of the video
+	# to H264 and AAC audio
  	command = [
  		config.ffmpeg_bin, '-y', '-i', 
  		'concat:%s' % (videos,), 
- 		'-c', 'copy',
+ 		'-c:v', 'libx264',
+ 		'-c:a', 'aac',
+ 		'-preset', 'fast',
+ 		'-crf', '18',
  		'%s%s.mp4' % (config.video_path, name)
  	]
 
