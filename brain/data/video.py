@@ -157,69 +157,8 @@ class VideoData:
 
 			self.db.query(sql, (self.job._id, vine_id))
 
-	def make_title(self, text):
-
-		""" Generate a YouTube video title
-			
-		This function uses a list of names to generate
-		a title for a YouTube video
-
-		Returns:
-			The video title as a string
-		
-		Notes:
-			This function also uses the datetime 
-			formatting to give the current date
-		"""
-
-		if self.job:
-			return self.job.interpret(text)
-		else:
-			return text
-
-	def make_description(self, text, vines):
-
-		""" Generate a YouTube video description
-
-		{user}: Author
-		{description}: Description
-		{position}: Position
-		{time}: Time postion
-		{id}: Identifier
-
-		[VINES="FORMAT"]
-		
-		"""
-
-		def _vine_dict(vid):
-			formatter = {
-				'user': vid.user,
-				'description': vid.description,
-				'position': _vine_dict.pos,
-				'time': _vine_dict.pos * 6,
-				'id': vid.id,
-			}
-			_vine_dict.pos += 1
-			return formatter
-
-		_vine_dict.pos = 0
-
-		def print_vines(key):
-			pattern = r'\[VINES(?:=|\s)(?:\'|\")(.*)(?:\'|\")\]'
-			match = re.search(pattern, key)
-			if match:
-				style = match.group(1)
-				infos = [util.format(style, **_vine_dict(vid)) for vid in vines]
-				infos.insert(0, '')
-				infos.append('')
-				return '\n'.join(infos)
-			else:
-				return key
-
-		if self.job:
-			return self.job.interpret(text, print_vines)
-		else:
-			return text
+	# Removed the info of the video
+	# to youtube generator
 
 # Kind of ugly
 def get_top_videos(db, job):

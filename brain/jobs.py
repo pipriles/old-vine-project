@@ -208,8 +208,10 @@ class JobData:
 		self.job.__init__(*new)
 
 	def get_accounts(self):
-		sql  = "SELECT accountID, title, language"
-		sql += " FROM job_account "
+		sql  = "SELECT"
+		sql += " accountID, title, description,"
+		sql += " keywords, category, language "
+		sql += "FROM job_account "
 		sql += "WHERE jobID = %s"
 		dbc = self.db.query(sql, (self.job._id,))
 		return dbc.fetchall()

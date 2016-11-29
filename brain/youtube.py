@@ -7,9 +7,6 @@ import logging
 import httplib 		# For exceptions
 import httplib2
 import datetime as dt
-import unicodedata
-import re
-
 
 from apiclient.discovery import build
 from apiclient.errors import HttpError
@@ -36,52 +33,6 @@ fields += "keywords "
 fields += "privacyStatus"
 
 UploadVideo = namedtuple("UploadVideo", fields)
-
-def gen_keywords(vids):
-		
-	# Should i move this to the video module?
-
-	tags = {}
-	regex_1 = re.compile(r'\w{3,}')
-	regex_2 = re.compile(r'[^\w\s]')
-	regex_3 = re.compile(r'\s{2,}')
-	stop_words = _get_stop_words("english")
-
-	for vid in vids:
-		user = unicodedata.normalize('NFD', vid.user)
-		user = user.encode('ascii', 'ignore')
-		description = unicodedata.normalize('NFD', vid.description)
-		description = description.encode('ascii', 'ignore')
-		data = regex_1.findall(description)
-		data = [x[:30].lower() for x in data]
-		for word in data:
-			if word not in stop_words:
-				_add_tag(tags, word)
-
-		user = regex_2.sub(' ', user)
-		user = regex_3.sub(' ', user)
-		_add_tag(tags, user[:30].lower())
-
-	ret = sorted(tags, key=lambda x: (tags[x], len(x)), reverse=True)
-	for x in ret:
-		logger.debug("{0}".format(x))
-
-	return ret
-
-def _add_tag(tags, word):
-	
-	if word in tags:
-		tags[word] += 1
-	else:
-		tags[word] = 1
-
-def _get_stop_words(lang):
-
-	path = config.WORDS_DIR + "{}.txt".format(lang)
-	with open(path) as f: 
-		stop_words = f.read().split()
-
-	return stop_words
 
 class YouTubeData:
 
@@ -200,7 +151,7 @@ def init_upload(youtube, opt):
 			'title': opt.title,
 			'description': opt.description[:4500],
 			'tags': tags,
-			'categoryId': opt.category
+			'categoryId': 22 # opt.category (I have to fix it to change the category)
 		},
 		'status': {
 			'privacyStatus': opt.privacyStatus
@@ -224,9 +175,11 @@ def init_upload(youtube, opt):
 			url = upload_video(upload_request)
 			loop = False
 		except HttpError, e:
-			if e.resp.status == 400:
-				if len(body['snippet']['tags']) != 0:
-					del body['snippet']['tags'][-1]
+			logger.debug("HttpError!")
+			if e.resp.status == 400 \
+			and len(body['snippet']['tags']) != 0:
+				del body['snippet']['tags'][-1]
+				logger.debug('Deleted one tag')	
 			else:
 				# Should just log as warning not raise
 				loop = False
@@ -248,6 +201,8 @@ def upload_video(request):
 		else:
 			logger.debug(result)
 			logger.warning("Bad response trying to upload the video :(")
+
+		logger.debug("End of while")
 
 	return result['id']
 

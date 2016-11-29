@@ -17,6 +17,7 @@ from multiprocessing import Process, Pool
 import config
 import download as dl
 import youtube as yt
+import util
 
 from data import video
 
@@ -117,27 +118,30 @@ class CombineProtocol:
 
 	def upload_video(self):
 
-		if self.vid.job is None or self.vid.job.autoupload:
+		if self.vid.job and self.vid.job.autoupload:
 
+			job = self.vid.job
 			accounts = self.vid.get_accounts()
 			logger.debug(accounts)
 
 			# I have to add the autogen description
 			# Maybe a settings for the privacy
 
-			file = config.video_path + '%s.mp4' % self.vid.id
-			keywords = yt.gen_keywords(self.downloaded)
-			description  = "TAGS: "
-			description += ', '.join(keywords)
-			category = 22
-			privacyStatus = yt.PRIVACY_STATUS[0]
+			file = "{}{}.mp4".format(config.video_path, self.vid.id)
+			privacyStatus = yt.PRIVACY_STATUS[1]	# DEBUG REASONS
 
 			for x in accounts:
-				# The title and the description
-				# are from the video module now
+				# The account should be an object
 
 				user = x[0]
-				title = yt.make_title(x[1], self.vid.job)
+				title = util.parse_title(job, x[1])
+				description = util.parse_description(job, x[2], self.downloaded)
+				keywords = util.gen_keywords(self.downloaded, x[3])
+				category = x[5]
+
+				logger.debug(title)
+				logger.debug(description)
+
 				args = yt.UploadVideo(user, file, title, 
 					description, category, keywords, privacyStatus)
 
