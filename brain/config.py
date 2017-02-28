@@ -32,8 +32,8 @@ MAX_CLIENTS = 1
 
 # Youtube module
 
-CLIENT_ID = "892925157774-u9l5kehvb7fgnqnb86rdoj0a3ek6ktd0.apps.googleusercontent.com"
-CLIENT_SECRET = "k52sVi1FQCr4rj-NOICvSDDZ"
+CLIENT_ID = ""
+CLIENT_SECRET = ""
 TOKEN_URI = "https://accounts.google.com/o/oauth2/token"
 
 YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube"
